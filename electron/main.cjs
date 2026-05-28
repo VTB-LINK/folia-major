@@ -69,15 +69,12 @@ const WINDOWS_APP_USER_MODEL_ID = 'top.izuna.foliamajor';
 const REMOTE_CONTROL_WINDOW_TITLE = 'Folia Remote';
 const bundledAppIconPath = path.join(__dirname, '../build/icon.png');
 const extraResourceIconPath = path.join(process.resourcesPath, 'icon.png');
+const bundledMacTrayIconPath = path.join(__dirname, '../build/trayTemplate.png');
+const bundledMacTrayIcon2xPath = path.join(__dirname, '../build/trayTemplate@2x.png');
+const extraResourceMacTrayIconPath = path.join(process.resourcesPath, 'trayTemplate.png');
+const extraResourceMacTrayIcon2xPath = path.join(process.resourcesPath, 'trayTemplate@2x.png');
 const APP_ICON_PATH = fs.existsSync(bundledAppIconPath) ? bundledAppIconPath : extraResourceIconPath;
 const THUMBAR_ICON_DIR = path.join(__dirname, '../build/thumbar');
-const MACOS_TRAY_ICON_SVG = `
-<svg width="18" height="18" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <path d="M160 128C160 110 175 110 190 110H220C235 110 250 125 250 140V372C250 388 235 402 220 402H190C175 402 160 388 160 372V128Z" fill="black"/>
-  <path d="M240 110H340C380 110 400 140 400 170C400 200 360 200 340 200H250V110Z" fill="black"/>
-  <path d="M250 240H320C350 240 360 260 360 280C360 300 340 300 320 300H250V240Z" fill="black"/>
-</svg>
-`;
 
 function loadThumbarIcon(name) {
   if (!nativeImage || typeof nativeImage.createFromPath !== 'function') {
@@ -106,21 +103,30 @@ function createTrayIconImage() {
     return APP_ICON_PATH;
   }
 
-  if (!nativeImage || typeof nativeImage.createFromDataURL !== 'function') {
+  if (!nativeImage || typeof nativeImage.createFromPath !== 'function') {
     return APP_ICON_PATH;
   }
 
-  const scaleFactor = screen?.getPrimaryDisplay?.().scaleFactor ?? 1;
-  const targetSize = scaleFactor > 1 ? 36 : 18;
-  const dataUrl = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(MACOS_TRAY_ICON_SVG)}`;
-  const trayImage = nativeImage.createFromDataURL(dataUrl).resize({
-    width: targetSize,
-    height: targetSize,
-    quality: 'best',
-  });
+  const trayImagePath = fs.existsSync(bundledMacTrayIconPath)
+    ? bundledMacTrayIconPath
+    : extraResourceMacTrayIconPath;
+  const trayImage2xPath = fs.existsSync(bundledMacTrayIcon2xPath)
+    ? bundledMacTrayIcon2xPath
+    : extraResourceMacTrayIcon2xPath;
+  const trayImage = nativeImage.createFromPath(trayImagePath);
 
   if (trayImage.isEmpty()) {
     return APP_ICON_PATH;
+  }
+
+  const retinaImage = nativeImage.createFromPath(trayImage2xPath);
+  if (!retinaImage.isEmpty()) {
+    trayImage.addRepresentation({
+      scaleFactor: 2.0,
+      width: 32,
+      height: 32,
+      buffer: retinaImage.toPNG(),
+    });
   }
 
   if (typeof trayImage.setTemplateImage === 'function') {
