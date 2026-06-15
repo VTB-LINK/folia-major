@@ -10,6 +10,7 @@ import { searchQQLyrics, fetchQQLyrics } from '../../utils/lyrics/providers/qqLy
 import { searchKugouLyrics, fetchKugouLyrics } from '../../utils/lyrics/providers/kugouLyricProvider';
 import { useSettingsUiStore } from '../../stores/useSettingsUiStore';
 import { calculateMatchScore } from '../../utils/lyrics/matchScore';
+import { buildLyricSearchQuery } from '../../utils/lyrics/searchQuery';
 
 // src/components/modal/OnlineLyricMatchModal.tsx
 
@@ -46,6 +47,7 @@ const OnlineLyricMatchModal: React.FC<OnlineLyricMatchModalProps> = ({ song, onC
         return {
             title: song.name || '',
             artist,
+            album: song.al?.name || song.album?.name || '',
             durationMs: song.dt || song.duration || 0,
         };
     }, [song]);
@@ -83,7 +85,8 @@ const OnlineLyricMatchModal: React.FC<OnlineLyricMatchModalProps> = ({ song, onC
         let isCurrent = true;
 
         const artist = song.ar?.map(item => item.name).join(', ') || song.artists?.map(item => item.name).join(', ') || '';
-        const initialQuery = `${song.name} ${artist}`.trim();
+        const album = song.al?.name || song.album?.name || '';
+        const initialQuery = buildLyricSearchQuery(song.name, artist, album);
         setSearchQuery(initialQuery);
         setIsSearching(true);
         setSearchResults([]);

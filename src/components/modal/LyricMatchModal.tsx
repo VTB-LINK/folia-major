@@ -10,6 +10,7 @@ import { useSettingsUiStore } from '../../stores/useSettingsUiStore';
 import { searchQQLyrics, fetchQQLyrics } from '../../utils/lyrics/providers/qqLyricProvider';
 import { searchKugouLyrics, fetchKugouLyrics } from '../../utils/lyrics/providers/kugouLyricProvider';
 import { calculateMatchScore } from '../../utils/lyrics/matchScore';
+import { buildLyricSearchQuery } from '../../utils/lyrics/searchQuery';
 import {
     getLyricMatchSourceLabel,
     getMatchResultAlbumId,
@@ -146,9 +147,8 @@ const LyricMatchModal: React.FC<LyricMatchModalProps> = ({ song, onClose, onMatc
     // Initialize search
     useEffect(() => {
         let isCurrent = true;
-        const initialQuery = song.artist
-            ? `${song.artist} ${song.title}`
-            : song.title || song.fileName.replace(/\.(mp3|flac|m4a|wav|ogg|opus|aac)$/i, '');
+        const title = song.title || song.fileName.replace(/\.(mp3|flac|m4a|wav|ogg|opus|aac)$/i, '');
+        const initialQuery = buildLyricSearchQuery(title, song.artist || '', song.album || song.embeddedAlbum || '');
         setSearchQuery(initialQuery);
         setIsSearching(true);
         setSearchResults([]);

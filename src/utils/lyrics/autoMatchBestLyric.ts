@@ -6,6 +6,7 @@ import { searchQQLyrics, fetchQQLyrics } from './providers/qqLyricProvider';
 import { searchKugouLyrics, fetchKugouLyrics } from './providers/kugouLyricProvider';
 import { normalizeLyricMatchDurationMs } from './duration';
 import { calculateMatchScore } from './matchScore';
+import { buildLyricSearchQuery } from './searchQuery';
 
 // src/utils/lyrics/autoMatchBestLyric.ts
 // Utility module for automatically matching the best word-by-word lyrics across multiple sources.
@@ -22,13 +23,6 @@ export interface AutoMatchBestLyricOptions {
         lyrics: LyricData | null;
         chorusRanges?: NeteaseChorusRange[];
     };
-}
-
-function buildSearchQuery(title: string, artist: string, album?: string): string {
-    return [title, artist, album]
-        .map(part => part?.trim())
-        .filter((part): part is string => Boolean(part))
-        .join(' - ');
 }
 
 function selectBestCandidate(
@@ -96,7 +90,7 @@ export async function autoMatchBestLyric(
     qqMid?: string;
     kgHash?: string;
 } | null> {
-    const searchQuery = buildSearchQuery(title, artist, options.album);
+    const searchQuery = buildLyricSearchQuery(title, artist, options.album);
     const normalizedDurationMs = normalizeLyricMatchDurationMs(durationMs);
     console.log(`[autoMatchBestLyric] Initiating best lyric auto-match for "${searchQuery}" (Duration: ${normalizedDurationMs}ms)`);
     const targetSong = { title, artist, durationMs: normalizedDurationMs };

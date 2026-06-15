@@ -12,6 +12,7 @@ import { useSettingsUiStore } from '../../stores/useSettingsUiStore';
 import { searchQQLyrics, fetchQQLyrics } from '../../utils/lyrics/providers/qqLyricProvider';
 import { searchKugouLyrics, fetchKugouLyrics } from '../../utils/lyrics/providers/kugouLyricProvider';
 import { calculateMatchScore } from '../../utils/lyrics/matchScore';
+import { buildLyricSearchQuery } from '../../utils/lyrics/searchQuery';
 import {
     getMatchResultAlbumName,
     getMatchResultArtists,
@@ -141,7 +142,7 @@ const NaviLyricMatchModal: React.FC<NaviLyricMatchModalProps> = ({ song, onClose
     // Auto search on mount
     useEffect(() => {
         let isCurrent = true;
-        const query = `${song.name} ${navidromeArtist}`.trim();
+        const query = buildLyricSearchQuery(song.name, navidromeArtist, navidromeAlbum);
         setSearchQuery(query);
         setIsSearching(true);
         setSearchResults([]);
@@ -180,7 +181,7 @@ const NaviLyricMatchModal: React.FC<NaviLyricMatchModalProps> = ({ song, onClose
         return () => {
             isCurrent = false;
         };
-    }, [song, source]);
+    }, [song, source, navidromeArtist, navidromeAlbum]);
 
     useEffect(() => {
         if (!enableAlternativeLyricSources && source !== 'netease') {
