@@ -21,9 +21,25 @@ export interface AutoMatchBestLyricOptions {
     neteaseCandidate?: {
         id: number | string;
         lyrics: LyricData | null;
+        isPureMusic?: boolean;
         chorusRanges?: NeteaseChorusRange[];
     };
 }
+
+export type AutoMatchBestLyricMatch = {
+    lyrics: LyricData;
+    source: 'netease' | 'qq' | 'kugou';
+    id: number | string;
+    qqMid?: string;
+    kgHash?: string;
+    isPureMusic?: false;
+};
+
+export type AutoMatchBestLyricPureMusic = {
+    isPureMusic: true;
+};
+
+export type AutoMatchBestLyricResult = AutoMatchBestLyricMatch | AutoMatchBestLyricPureMusic | null;
 
 function selectBestCandidate(
     source: 'netease' | 'qq' | 'kugou',
@@ -83,13 +99,7 @@ export async function autoMatchBestLyric(
     artist: string,
     durationMs: number,
     options: AutoMatchBestLyricOptions = {}
-): Promise<{
-    lyrics: LyricData;
-    source: 'netease' | 'qq' | 'kugou';
-    id: number | string;
-    qqMid?: string;
-    kgHash?: string;
-} | null> {
+): Promise<AutoMatchBestLyricResult> {
     const searchQuery = buildLyricSearchQuery(title, artist, options.album);
     const normalizedDurationMs = normalizeLyricMatchDurationMs(durationMs);
     console.log(`[autoMatchBestLyric] Initiating best lyric auto-match for "${searchQuery}" (Duration: ${normalizedDurationMs}ms)`);
@@ -118,6 +128,7 @@ export async function autoMatchBestLyric(
             const processed = String(options.neteaseCandidate?.id) === String(song.id)
                 ? {
                     lyrics: options.neteaseCandidate.lyrics,
+                    isPureMusic: options.neteaseCandidate.isPureMusic ?? false,
                     chorusRanges: options.neteaseCandidate.chorusRanges ?? []
                 }
                 : await withTimeout(
@@ -138,6 +149,11 @@ export async function autoMatchBestLyric(
 
             if (!processed) {
                 continue;
+            }
+
+            if (processed.isPureMusic) {
+                console.log(`[autoMatchBestLyric] NetEase candidate "${song.name}" is pure music. Skipping alternative lyric sources.`);
+                return { isPureMusic: true };
             }
 
             if (processed.chorusRanges && processed.chorusRanges.length > 0) {

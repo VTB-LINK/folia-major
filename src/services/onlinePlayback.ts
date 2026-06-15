@@ -159,10 +159,11 @@ export async function loadOnlineSongLyrics(
                 neteaseCandidate: {
                     id: song.id,
                     lyrics: parsedLyrics,
+                    isPureMusic: processed.isPureMusic,
                     chorusRanges: processed.chorusRanges
                 }
             });
-            if (bestMatch && (bestMatch.source === 'qq' || bestMatch.source === 'kugou')) {
+            if (bestMatch && !bestMatch.isPureMusic && (bestMatch.source === 'qq' || bestMatch.source === 'kugou')) {
                 const overrideState: OnlineLyricsState = {
                     lyricsSource: 'online',
                     matchedSongId: song.id,

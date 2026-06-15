@@ -98,6 +98,48 @@ describe('autoMatchBestLyric', () => {
         expect(searchKugouLyricsMock).not.toHaveBeenCalled();
     });
 
+    it('stops matching when the NetEase candidate is pure music', async () => {
+        cloudSearchMock.mockResolvedValue({
+            result: {
+                songs: [
+                    { id: 101, name: 'Song Title', dt: 200000, ar: [{ name: 'Artist Name' }] }
+                ]
+            }
+        });
+        getLyricMock.mockResolvedValue({ lrc: { lyric: '[00:00.00]纯音乐，请欣赏' } });
+        processNeteaseLyricsMock.mockResolvedValue({
+            lyrics: null,
+            mainLrc: '[00:00.00]纯音乐，请欣赏',
+            yrcLrc: null,
+            transLrc: '',
+            isPureMusic: true,
+            chorusRanges: []
+        });
+
+        const result = await autoMatchBestLyric('Song Title', 'Artist Name', 200000);
+
+        expect(result).toEqual({ isPureMusic: true });
+        expect(searchQQLyricsMock).not.toHaveBeenCalled();
+        expect(searchKugouLyricsMock).not.toHaveBeenCalled();
+    });
+
+    it('stops matching when the preprocessed NetEase candidate is pure music', async () => {
+        const result = await autoMatchBestLyric('Song Title', 'Artist Name', 200000, {
+            neteaseCandidate: {
+                id: 101,
+                lyrics: null,
+                isPureMusic: true,
+                chorusRanges: []
+            }
+        });
+
+        expect(result).toEqual({ isPureMusic: true });
+        expect(cloudSearchMock).not.toHaveBeenCalled();
+        expect(getLyricMock).not.toHaveBeenCalled();
+        expect(searchQQLyricsMock).not.toHaveBeenCalled();
+        expect(searchKugouLyricsMock).not.toHaveBeenCalled();
+    });
+
     it('normalizes accidental ms * 1000 durations before filtering candidates', async () => {
         cloudSearchMock.mockResolvedValue({ result: { songs: [] } });
         searchQQLyricsMock.mockResolvedValue([

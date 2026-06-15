@@ -188,7 +188,7 @@ export function useLibraryPlaybackController({
         }
 
         const queueSongs = playQueue
-            .map(song => (song as SongResult & { localData?: LocalSong }).localData)
+            .map(song => (song as SongResult & { localData?: LocalSong; }).localData)
             .filter((song): song is LocalSong => Boolean(song?.id));
 
         if (!queueSongs.length) {
@@ -377,8 +377,8 @@ export function useLibraryPlaybackController({
                 return lyrics;
             }
 
-            if ((navidromeSong as NavidromeSong & { lyricsSource?: string; matchedLyrics?: LyricData }).lyricsSource === 'online' && (navidromeSong as NavidromeSong & { matchedLyrics?: LyricData }).matchedLyrics) {
-                return (navidromeSong as NavidromeSong & { matchedLyrics?: LyricData }).matchedLyrics ?? null;
+            if ((navidromeSong as NavidromeSong & { lyricsSource?: string; matchedLyrics?: LyricData; }).lyricsSource === 'online' && (navidromeSong as NavidromeSong & { matchedLyrics?: LyricData; }).matchedLyrics) {
+                return (navidromeSong as NavidromeSong & { matchedLyrics?: LyricData; }).matchedLyrics ?? null;
             }
 
             let resolved = await resolvePreferredNavidromeLyrics(navidromeSong);
@@ -633,7 +633,11 @@ export function useLibraryPlaybackController({
                         const bestMatch = await autoMatchBestLyric(navidromeSong.name, artistName, navidromeSong.duration || navidromeSong.dt || 0, {
                             album: albumName
                         });
-                        if (bestMatch) {
+                        if (bestMatch?.isPureMusic) {
+                            isAutoMatched = true;
+                            autoMatchedLyrics = null;
+                            (navidromeSong as NavidromeSong & { matchedIsPureMusic?: boolean; }).matchedIsPureMusic = true;
+                        } else if (bestMatch) {
                             nextLyrics = bestMatch.lyrics;
                             autoMatchedLyrics = bestMatch.lyrics;
                             isAutoMatched = true;
@@ -678,7 +682,7 @@ export function useLibraryPlaybackController({
                             const lyricRes = await neteaseApi.getLyric(matchedSong.id);
                             const processed = await processNeteaseLyrics({ type: 'netease', ...lyricRes }, { songId: matchedSong.id });
                             nextLyrics = processed.lyrics;
-                            (navidromeSong as NavidromeSong & { matchedIsPureMusic?: boolean }).matchedIsPureMusic = processed.isPureMusic;
+                            (navidromeSong as NavidromeSong & { matchedIsPureMusic?: boolean; }).matchedIsPureMusic = processed.isPureMusic;
                             if (nextLyrics || processed.isPureMusic) {
                                 autoMatchedLyrics = nextLyrics;
                                 isAutoMatched = true;
@@ -853,7 +857,7 @@ export function useLibraryPlaybackController({
 
     const handleManualMatchOnline = useCallback(() => {
         setIsPanelOpen(false);
-        if (currentSong && (currentSong as SongResult & { isNavidrome?: boolean }).isNavidrome) {
+        if (currentSong && (currentSong as SongResult & { isNavidrome?: boolean; }).isNavidrome) {
             setShowNaviLyricMatchModal(true);
             return;
         }
@@ -886,11 +890,11 @@ export function useLibraryPlaybackController({
 
     const handleNaviLyricMatchComplete = useCallback(async () => {
         setShowNaviLyricMatchModal(false);
-        if (currentSong && (currentSong as SongResult & { isNavidrome?: boolean }).isNavidrome) {
+        if (currentSong && (currentSong as SongResult & { isNavidrome?: boolean; }).isNavidrome) {
             const navidromeQueue = playQueue
-                .map(song => (song as SongResult & { navidromeData?: NavidromeSong }).navidromeData)
+                .map(song => (song as SongResult & { navidromeData?: NavidromeSong; }).navidromeData)
                 .filter((song): song is NavidromeSong => Boolean(song?.isNavidrome));
-            await onPlayNavidromeSong((currentSong as SongResult & { navidromeData: NavidromeSong }).navidromeData, navidromeQueue);
+            await onPlayNavidromeSong((currentSong as SongResult & { navidromeData: NavidromeSong; }).navidromeData, navidromeQueue);
             setStatusMsg({ type: 'success', text: 'Match successful' });
         }
     }, [currentSong, onPlayNavidromeSong, playQueue, setStatusMsg]);
@@ -1084,6 +1088,10 @@ export function useLibraryPlaybackController({
                     setStatusMsg({ type: 'info', text: t('status.bestLyricsNotFound') || '没有找到合适的最佳歌词' });
                     return false;
                 }
+                if (bestMatch.isPureMusic) {
+                    setStatusMsg({ type: 'info', text: t('status.bestLyricsPureMusic') || '纯音乐，无需匹配歌词' });
+                    return false;
+                }
 
                 const updatedLocalSong: LocalSong = {
                     ...localData,
@@ -1120,6 +1128,10 @@ export function useLibraryPlaybackController({
 
                 if (!bestMatch) {
                     setStatusMsg({ type: 'info', text: t('status.bestLyricsNotFound') || '没有找到合适的最佳歌词' });
+                    return false;
+                }
+                if (bestMatch.isPureMusic) {
+                    setStatusMsg({ type: 'info', text: t('status.bestLyricsPureMusic') || '纯音乐，无需匹配歌词' });
                     return false;
                 }
 
@@ -1159,6 +1171,10 @@ export function useLibraryPlaybackController({
 
             if (!bestMatch) {
                 setStatusMsg({ type: 'info', text: t('status.bestLyricsNotFound') || '没有找到合适的最佳歌词' });
+                return false;
+            }
+            if (bestMatch.isPureMusic) {
+                setStatusMsg({ type: 'info', text: t('status.bestLyricsPureMusic') || '纯音乐，无需匹配歌词' });
                 return false;
             }
 

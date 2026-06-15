@@ -15,6 +15,7 @@ export default {
     "matchingBestLyrics": "Matching the best lyrics...",
     "bestLyricsMatched": "Matched best lyrics",
     "bestLyricsNotFound": "No suitable best lyrics found",
+    "bestLyricsPureMusic": "NetEase marks this track as pure music, so lyrics matching is not needed",
     "bestLyricsMatchFailed": "Failed to match best lyrics",
     "noSongPlaying": "No song is playing",
     "enterSongId": "Enter Song ID or Import File",

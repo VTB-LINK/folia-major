@@ -15,6 +15,7 @@ export default {
     "matchingBestLyrics": "正在匹配最佳歌词...",
     "bestLyricsMatched": "已匹配最佳歌词",
     "bestLyricsNotFound": "没有找到合适的最佳歌词",
+    "bestLyricsPureMusic": "纯音乐，无需匹配歌词",
     "bestLyricsMatchFailed": "匹配最佳歌词失败",
     "noSongPlaying": "当前没有正在播放的歌曲",
     "enterSongId": "请输入歌曲ID或导入文件",

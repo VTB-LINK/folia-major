@@ -1286,7 +1286,7 @@ export async function matchLyrics(song: LocalSong): Promise<LyricData | null> {
             const bestMatch = await autoMatchBestLyric(cleanTitle, song.artist || '', song.duration, {
                 album: song.album
             });
-            if (bestMatch) {
+            if (bestMatch && !bestMatch.isPureMusic) {
                 if (bestMatch.source === 'netease') {
                     song.matchedSongId = bestMatch.id as number;
                     song.matchedLyricsSource = 'netease';
