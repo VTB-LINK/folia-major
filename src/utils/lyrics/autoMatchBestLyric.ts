@@ -5,7 +5,7 @@ import type { NeteaseChorusRange } from './chorusEffects';
 import { searchQQLyrics, fetchQQLyrics } from './providers/qqLyricProvider';
 import { searchKugouLyrics, fetchKugouLyrics } from './providers/kugouLyricProvider';
 import { normalizeLyricMatchDurationMs } from './duration';
-import { calculateMatchScore } from './matchScore';
+import { calculateMatchScoreDetails } from './matchScore';
 import { buildLyricSearchQuery } from './searchQuery';
 
 // src/utils/lyrics/autoMatchBestLyric.ts
@@ -15,6 +15,7 @@ const PROVIDER_SEARCH_TIMEOUT_MS = 3500;
 const PROVIDER_LYRIC_TIMEOUT_MS = 5000;
 const AUTO_MATCH_SEARCH_LIMIT = 10;
 const AUTO_MATCH_MIN_SCORE = 75;
+const SHOULD_LOG_MATCH_DETAILS = import.meta.env.DEV;
 
 export interface AutoMatchBestLyricOptions {
     album?: string;
@@ -44,24 +45,42 @@ export type AutoMatchBestLyricResult = AutoMatchBestLyricMatch | AutoMatchBestLy
 function selectBestCandidate(
     source: 'netease' | 'qq' | 'kugou',
     songs: SongResult[],
-    target: { title: string; artist: string; durationMs: number }
+    target: { title: string; artist: string; durationMs: number; album?: string }
 ): SongResult | null {
+    const isReliableCandidate = (details: ReturnType<typeof calculateMatchScoreDetails>) =>
+        details.titleMatched && (details.artistMatched || details.albumMatched === true);
+
     const scored = songs
         .slice(0, AUTO_MATCH_SEARCH_LIMIT)
         .map(song => ({
             song,
-            score: calculateMatchScore(target, song)
+            details: calculateMatchScoreDetails(target, song)
         }))
-        .sort((a, b) => b.score - a.score);
+        .sort((a, b) => b.details.score - a.details.score);
 
-    const best = scored[0];
+    if (SHOULD_LOG_MATCH_DETAILS) {
+        for (const item of scored) {
+            console.log(
+                `[autoMatchBestLyric] ${source} candidate "${item.song.name}" score=${item.details.score} ` +
+                `(title=${item.details.titleMatched ? 'hit' : 'miss'}, artist=${item.details.artistMatched ? 'hit' : 'miss'}, ` +
+                `album=${item.details.albumMatched === null ? 'n/a' : (item.details.albumMatched ? 'hit' : 'miss')}, ` +
+                `duration=${item.details.durationMatched === null ? 'n/a' : (item.details.durationMatched ? 'hit' : 'miss')})`
+            );
+        }
+    }
+
+    const best = scored.find(item => isReliableCandidate(item.details)) ?? scored[0];
     if (!best) {
         return null;
     }
 
-    console.log(`[autoMatchBestLyric] Best ${source} candidate: "${best.song.name}" score=${best.score}`);
-    if (best.score < AUTO_MATCH_MIN_SCORE) {
-        console.log(`[autoMatchBestLyric] Skipping ${source} candidate because score ${best.score} is below ${AUTO_MATCH_MIN_SCORE}`);
+    console.log(`[autoMatchBestLyric] Best ${source} candidate: "${best.song.name}" score=${best.details.score}`);
+    if (!isReliableCandidate(best.details)) {
+        console.log(`[autoMatchBestLyric] Skipping ${source} candidate because title and identity fields did not match`);
+        return null;
+    }
+    if (best.details.score < AUTO_MATCH_MIN_SCORE) {
+        console.log(`[autoMatchBestLyric] Skipping ${source} candidate because score ${best.details.score} is below ${AUTO_MATCH_MIN_SCORE}`);
         return null;
     }
 
@@ -103,7 +122,7 @@ export async function autoMatchBestLyric(
     const searchQuery = buildLyricSearchQuery(title, artist, options.album);
     const normalizedDurationMs = normalizeLyricMatchDurationMs(durationMs);
     console.log(`[autoMatchBestLyric] Initiating best lyric auto-match for "${searchQuery}" (Duration: ${normalizedDurationMs}ms)`);
-    const targetSong = { title, artist, durationMs: normalizedDurationMs };
+    const targetSong = { title, artist, album: options.album, durationMs: normalizedDurationMs };
     let neteaseChorusRanges: NeteaseChorusRange[] = options.neteaseCandidate?.chorusRanges ?? [];
 
     // 1. NetEase Music

@@ -12,6 +12,7 @@ import { detectTimedLyricFormat } from '../formatDetection';
 import { krcDecrypt } from './krcDecrypt';
 import { applyDetectedChorusEffects, applyNeteaseChorusByTime } from '../chorusEffects';
 import type { NeteaseChorusRange } from '../chorusEffects';
+import { buildKugouLyricSearchQuery } from '../searchQuery';
 
 const isElectron = typeof window !== 'undefined' && (window as any).electron;
 
@@ -101,9 +102,10 @@ async function requestKugou(url: string, params: Record<string, any>, module: st
  */
 export async function searchKugouLyrics(keyword: string, page = 1, pageSize = 20): Promise<SongResult[]> {
   const pagesize = pageSize;
+  const searchKeyword = buildKugouLyricSearchQuery(keyword);
   const params = {
     sorttype: '0',
-    keyword: keyword,
+    keyword: searchKeyword,
     pagesize: pagesize,
     page: page,
   };
@@ -138,7 +140,7 @@ export async function searchKugouLyrics(keyword: string, page = 1, pageSize = 20
     });
   } catch (error) {
     console.error('[Kugou] Search failed, trying old API:', error);
-    return await searchKugouLyricsOld(keyword, page, pageSize);
+    return await searchKugouLyricsOld(searchKeyword, page, pageSize);
   }
 }
 

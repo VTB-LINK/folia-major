@@ -517,30 +517,44 @@ export function useLibraryPlaybackController({
         void restoreCachedThemeForSong(initialMeta.unifiedSong.id).catch((error) => {
             console.warn('Theme load error', error);
         });
-        prewarmNearbyLocalSongs(preparedLocalSong, queue);
 
-        handleLocalSongMatch(preparedLocalSong).then(async ({ updatedLocalSong, matchedSongResult }) => {
-            if (currentSongRef.current !== initialMeta.unifiedSong.id) return;
+        void (async () => {
+            let prewarmBaseSong = preparedLocalSong;
 
-            const updatedMeta = await resolveLocalMetadataUI(updatedLocalSong, matchedSongResult);
-            setCurrentSong(updatedMeta.unifiedSong);
-            setLyrics(updatedMeta.lyrics);
-            setIsLyricsLoading(false);
+            try {
+                const { updatedLocalSong, matchedSongResult } = await handleLocalSongMatch(preparedLocalSong);
+                prewarmBaseSong = updatedLocalSong;
+                if (currentSongRef.current !== initialMeta.unifiedSong.id) return;
 
-            if (updatedMeta.coverUrl && updatedMeta.coverUrl !== initialMeta.coverUrl) {
-                loadCachedOrFetchCover(`cover_local_${updatedLocalSong.id}`, updatedMeta.coverUrl).then((resolvedCoverUrl) => {
-                    if (currentSongRef.current === updatedMeta.unifiedSong.id) {
-                        setCachedCoverUrl(resolvedCoverUrl);
-                    }
+                const updatedMeta = await resolveLocalMetadataUI(updatedLocalSong, matchedSongResult);
+                setCurrentSong(updatedMeta.unifiedSong);
+                setLyrics(updatedMeta.lyrics);
+                setIsLyricsLoading(false);
+
+                if (updatedMeta.coverUrl && updatedMeta.coverUrl !== initialMeta.coverUrl) {
+                    loadCachedOrFetchCover(`cover_local_${updatedLocalSong.id}`, updatedMeta.coverUrl).then((resolvedCoverUrl) => {
+                        if (currentSongRef.current === updatedMeta.unifiedSong.id) {
+                            setCachedCoverUrl(resolvedCoverUrl);
+                        }
+                    });
+                } else if (!updatedMeta.coverUrl) {
+                    setCachedCoverUrl(null);
+                }
+
+                void restoreCachedThemeForSong(updatedMeta.unifiedSong.id).catch((error) => {
+                    console.warn('Theme load error', error);
                 });
-            } else if (!updatedMeta.coverUrl) {
-                setCachedCoverUrl(null);
+            } catch (error) {
+                console.warn('Local song match pipeline failed:', error);
+                if (currentSongRef.current === initialMeta.unifiedSong.id) {
+                    setIsLyricsLoading(false);
+                }
+            } finally {
+                if (currentSongRef.current === initialMeta.unifiedSong.id) {
+                    prewarmNearbyLocalSongs(prewarmBaseSong, queue);
+                }
             }
-
-            void restoreCachedThemeForSong(updatedMeta.unifiedSong.id).catch((error) => {
-                console.warn('Theme load error', error);
-            });
-        });
+        })();
     }, [
         blobUrlRef,
         currentSongRef,
