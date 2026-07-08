@@ -181,6 +181,9 @@ export const syncNow = async (options: { syncThemes?: boolean; applyRemoteSettin
             pushedLocalSettings,
         };
         console.info('[sync] Sync completed', summary);
+        if (summary.downloadedThemeCount > 0 && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('folia-themes-synced'));
+        }
         return summary;
     } catch (error) {
         console.error('[sync] Sync failed:', error);

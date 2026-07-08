@@ -676,6 +676,17 @@ export default function App() {
     } = themeController;
 
     useEffect(() => {
+        const handleSyncCompleted = () => {
+            if (currentSong) {
+                void restoreCachedThemeForSong(currentSong, { allowLastUsedFallback: true });
+            }
+        };
+
+        window.addEventListener('folia-themes-synced', handleSyncCompleted);
+        return () => window.removeEventListener('folia-themes-synced', handleSyncCompleted);
+    }, [currentSong, restoreCachedThemeForSong]);
+
+    useEffect(() => {
         const isPureMusic = Boolean(currentSong?.isPureMusic);
         const songTitle = currentSong?.name;
         const allText = lyrics?.lines.map(l => l.fullText).join('\n') || null;
