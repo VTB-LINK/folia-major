@@ -1,0 +1,48 @@
+name: Deploy fork-release to Azure Static Web Apps
+
+# 部署纯前端 fork 到 Azure Static Web Apps（应用 folia-fork-vtb-tools）。
+# 触发：push 到 fork-release，或手动。
+# 构建仅跑 web（vite build），跳过 build:vercel-api（那是给 Vercel 的函数，纯静态用不上）。
+# 需仓库 secret：AZURE_STATIC_WEB_APPS_API_TOKEN = 该 SWA 的部署令牌（“管理部署令牌”获取）。
+on:
+  push:
+    branches:
+      - fork-release
+  workflow_dispatch:
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (web only, skip build:vercel-api)
+        run: npx vite build
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: dist
+          api_location: ""
+          output_location: ""
+          skip_app_build: true
