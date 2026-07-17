@@ -1,0 +1,33 @@
+name: Sync main from upstream
+
+# 把 fork 的 main 快进同步到上游 chthollyphile/folia-major:main。
+# 定时（每日）+ 手动（workflow_dispatch）。
+# 仅 fast-forward：push 不加 --force，若 main 意外分叉会失败报警而非覆盖，
+# 以此保证 main 始终是上游的干净镜像（分叉只应发生在 fork-release / feat 分支）。
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward main from upstream
+        run: |
+          set -euo pipefail
+          git fetch https://github.com/chthollyphile/folia-major.git main
+          echo "upstream main = $(git rev-parse --short FETCH_HEAD)"
+          git push origin FETCH_HEAD:refs/heads/main

@@ -1,0 +1,19 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/stage-client.html",
+      "/sw.js",
+      "/registerSW.js",
+      "/workbox-*.js",
+      "/manifest.webmanifest",
+      "/icon.svg",
+      "/*.{js,css,json,txt,png,jpg,jpeg,svg,ico,webmanifest,woff,woff2,ttf,wasm}",
+      "/api/*"
+    ]
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  }
+}
