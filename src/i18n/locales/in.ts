@@ -1193,6 +1193,7 @@ export default {
   },
   "userGuide": {
     "title": "Selamat Datang di Folia",
+    "agplNotice": "Versi modifikasi Folia, dilisensikan di bawah AGPL-3.0. Sumber: ",
     "subtitle": "Berikut beberapa tips untuk membantu navigasi Anda.",
     "commandPalette": {
       "title": "Palette Perintah",

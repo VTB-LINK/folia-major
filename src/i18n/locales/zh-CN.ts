@@ -1358,6 +1358,7 @@ export default {
   },
   "userGuide": {
     "title": "欢迎使用 Folia",
+    "agplNotice": "本站为 Folia 的修改版，依 AGPL-3.0 授权。源代码：",
     "subtitle": "这里有一些提示，希望能帮到你。",
     "commandPalette": {
       "title": "命令面板",

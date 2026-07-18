@@ -223,8 +223,8 @@ export default async function viteConfig({ mode }: ConfigEnv): Promise<UserConfi
           maximumFileSizeToCacheInBytes: 5000000
         },
         manifest: {
-          name: 'Folia Music',
-          short_name: 'Folia',
+          name: 'Folia Fork',
+          short_name: 'Folia Fork',
           description: 'A beautiful AI-themed music player',
           theme_color: '#09090b',
           background_color: '#09090b',

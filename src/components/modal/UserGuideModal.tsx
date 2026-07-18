@@ -5,6 +5,7 @@ import { useSettingsUiStore } from '../../stores/useSettingsUiStore';
 import { COMMAND_PALETTE_COMMANDS } from '../command-palette/commandRegistry';
 import type { Theme } from '../../types';
 import { UserGuidePageContent } from './UserGuidePageContent';
+import { FORK_SOURCE_URL, FORK_SOURCE_LABEL } from '../../utils/forkSource';
 import { UserGuideFooter } from './UserGuideFooter';
 import { USER_GUIDE_PAGE_COUNT, type GuidePage } from './userGuideContent';
 
@@ -115,6 +116,12 @@ export const UserGuideModal: React.FC<{ theme?: Theme | null }> = ({ theme }) =>
                         </div>
 
                         <div className="relative z-10 shrink-0 pt-5">
+                            {page === 1 && (
+                                <p className="mb-4 text-center text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                    {t('userGuide.agplNotice')}
+                                    <a href={FORK_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:decoration-white transition-colors">{FORK_SOURCE_LABEL}</a>
+                                </p>
+                            )}
                             <UserGuideFooter
                                 page={page}
                                 pageCount={USER_GUIDE_PAGE_COUNT}

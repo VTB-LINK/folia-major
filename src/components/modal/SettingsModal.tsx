@@ -14,6 +14,7 @@ import AppearanceSettingsSubview from './settings/AppearanceSettingsSubview';
 import DesktopSettingsSubview from './settings/DesktopSettingsSubview';
 import GeneralSettingsSubview from './settings/GeneralSettingsSubview';
 import IntegrationSettingsSubview from './settings/IntegrationSettingsSubview';
+import { FORK_SOURCE_URL, FORK_SOURCE_LABEL } from '../../utils/forkSource';
 import LabSettingsModal from './settings/LabSettingsModal';
 import PlaybackSettingsSubview from './settings/PlaybackSettingsSubview';
 import StorageSettingsSection from './settings/StorageSettingsSection';
@@ -1190,6 +1191,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 {t('help.madeBy') || "Made by"}
                                             </button>{' '}
                                             <a href="https://github.com/chthollyphile/folia-major" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline decoration-white/30 hover:decoration-white">chthollyphile/folia-major</a>
+                                        </p>
+                                        <p className="text-sm opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                                            Fork:{' '}
+                                            <a href={FORK_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors underline decoration-white/30 hover:decoration-white">{FORK_SOURCE_LABEL}</a>
+                                        </p>
+                                        <p className="text-sm opacity-60" style={{ color: 'var(--text-secondary)' }}>
+                                            License: AGPL-3.0
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-center gap-2 mt-6 mb-2 text-xs font-mono text-center">

@@ -1357,6 +1357,7 @@ export default {
   },
   "userGuide": {
     "title": "Welcome to Folia",
+    "agplNotice": "A modified version of Folia, licensed under AGPL-3.0. Source: ",
     "subtitle": "Here are some tips to help you navigate.",
     "commandPalette": {
       "title": "Command Palette",
