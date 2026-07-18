@@ -5,13 +5,13 @@
   "description": "Azure Static Web Apps 托管函数：AI 主题无密钥中继（用户自带 key）。",
   "main": "dist/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node20 --external:@azure/functions --outfile=dist/index.js"
+    "build": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node20 --external:@azure/functions --external:@google/genai --outfile=dist/index.js"
   },
   "dependencies": {
-    "@azure/functions": "^4.5.0"
+    "@azure/functions": "^4.5.0",
+    "@google/genai": "^2.12.0"
   },
   "devDependencies": {
-    "@google/genai": "^2.12.0",
     "esbuild": "^0.24.0"
   }
 }

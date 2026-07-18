@@ -1094,7 +1094,7 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                                     {t('options.aiProvider') || 'AI Provider'}
                                 </div>
                                 <div className="text-[10px] opacity-40 max-w-[360px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                                    用你自己的 key 从歌词生成主题；请求经本站中继，key 不落服务端、仅存于本机浏览器。
+                                    {t('options.aiProviderDesc')}
                                 </div>
                             </div>
                             <div className="flex bg-white/5 rounded-xl border border-white/5 p-1 shrink-0">

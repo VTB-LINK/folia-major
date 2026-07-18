@@ -823,6 +823,7 @@ export default {
     "confirmClearAll": "Yakin ingin menghapus semua cache?",
     "electronSettings": "Pengaturan Tema AI",
     "aiProvider": "Penyedia AI",
+    "aiProviderDesc": "Buat tema dari lirik dengan key Anda sendiri. Permintaan direlai oleh situs ini; key tidak pernah mencapai server dan hanya disimpan di browser Anda.",
     "useSystemProxyAI": "Gunakan Proxy Sistem untuk AI",
     "useSystemProxyAIDesc": "Arahkan permintaan AI secara ketat melalui proxy sistem.",
     "geminiApiKey": "Kunci API Gemini",

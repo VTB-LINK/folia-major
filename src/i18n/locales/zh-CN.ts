@@ -890,6 +890,7 @@ export default {
     "confirmClearAll": "确定要清空所有缓存吗？",
     "electronSettings": "AI主题设置",
     "aiProvider": "AI 供应商",
+    "aiProviderDesc": "用自己的 key 从歌词生成主题；请求经本站中继，key 不落服务端、仅存于本机浏览器。",
     "useSystemProxyAI": "为AI使用系统代理",
     "useSystemProxyAIDesc": "仅将AI相关的网络请求通过系统代理路由。",
     "geminiApiKey": "Gemini 密钥",

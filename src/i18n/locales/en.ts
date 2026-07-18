@@ -887,6 +887,7 @@ export default {
     "confirmClearAll": "Are you sure you want to clear all cache?",
     "electronSettings": "AI Theme Settings",
     "aiProvider": "AI Provider",
+    "aiProviderDesc": "Generate themes from lyrics with your own key. Requests are relayed by this site; the key never reaches the server and is stored only in your browser.",
     "useSystemProxyAI": "Use System Proxy for AI",
     "useSystemProxyAIDesc": "Route strictly AI requests through system proxy.",
     "geminiApiKey": "Gemini API Key",
