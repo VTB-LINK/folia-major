@@ -17,6 +17,7 @@ import {
 import { applyVisualizerTuningsToSettings, collectVisualizerTunings } from '../../visualizer/tuningRegistry';
 import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
+import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 
 // src/components/modal/settings/AppearanceSettingsSubview.tsx
 // Visual settings subview for theme presets, lyric renderer entry, layout settings, and configurations import/export.
@@ -538,6 +539,14 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     const { t } = useTranslation();
     const [importText, setImportText] = useState('');
     const [copiedType, setCopiedType] = useState<'none' | 'shortcode' | 'json'>('none');
+
+    // Web AI 主题：Electron 在"桌面设置"配 key；web 无桌面设置，故在此提供（用户自带 key，经 SWA 无密钥中继）。
+    const isElectron = typeof window !== 'undefined' && !!(window as unknown as { electron?: unknown }).electron;
+    const [webAi, setWebAiState] = useState<WebAiConfig>(() => getWebAiConfig());
+    const updateWebAi = (patch: Partial<WebAiConfig>) => {
+        setWebAiConfig(patch);
+        setWebAiState((prev) => ({ ...prev, ...patch }));
+    };
 
     const [exportThemeType, setExportThemeType] = useState<'custom' | 'ai' | 'none'>(() => {
         if (bgMode === 'ai' && aiTheme) return 'ai';
@@ -1071,6 +1080,106 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                     </div>
                 </div>
             </section>
+
+            {/* Web-only: AI 主题 key 配置（Electron 走桌面设置；web 用户自带 key，经 SWA 无密钥中继） */}
+            {!isElectron && (
+                <section>
+                    <h3 className="text-sm font-bold uppercase tracking-wider opacity-50 mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                        <Palette size={14} /> {t('options.aiProvider') || 'AI Provider'}
+                    </h3>
+                    <div className={`p-4 rounded-xl border space-y-4 ${settingsCardClass}`}>
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                                    {t('options.aiProvider') || 'AI Provider'}
+                                </div>
+                                <div className="text-[10px] opacity-40 max-w-[360px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                    用你自己的 key 从歌词生成主题；请求经本站中继，key 不落服务端、仅存于本机浏览器。
+                                </div>
+                            </div>
+                            <div className="flex bg-white/5 rounded-xl border border-white/5 p-1 shrink-0">
+                                {([
+                                    { value: 'gemini', label: 'Google Gemini' },
+                                    { value: 'openai', label: 'OpenAI Compatible' },
+                                ] as Array<{ value: WebAiConfig['provider']; label: string }>).map((option) => {
+                                    const selected = webAi.provider === option.value;
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => updateWebAi({ provider: option.value })}
+                                            className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                                            style={selected
+                                                ? { backgroundColor: theme?.secondaryColor || 'rgba(255,255,255,0.12)', color: 'var(--text-primary)' }
+                                                : { color: 'var(--text-secondary)', opacity: 0.6 }}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {webAi.provider !== 'openai' ? (
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                    {t('options.geminiApiKey') || 'Gemini API Key'}
+                                </label>
+                                <input
+                                    type="password"
+                                    value={webAi.geminiApiKey}
+                                    onChange={(e) => updateWebAi({ geminiApiKey: e.target.value })}
+                                    placeholder="AI Theme Generation Key"
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                    style={{ color: 'var(--text-primary)' }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.openaiApiUrl') || 'OpenAI API URL'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={webAi.openaiApiUrl}
+                                        onChange={(e) => updateWebAi({ openaiApiUrl: e.target.value })}
+                                        placeholder="https://api.openai.com/v1 or https://api.deepseek.com"
+                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                        style={{ color: 'var(--text-primary)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.openaiApiModel') || 'OpenAI Model'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={webAi.openaiApiModel}
+                                        onChange={(e) => updateWebAi({ openaiApiModel: e.target.value })}
+                                        placeholder="gpt-4o / gpt-4.1-mini / deepseek-v4-flash"
+                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                        style={{ color: 'var(--text-primary)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.openaiApiKey') || 'OpenAI API Key'}
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={webAi.openaiApiKey}
+                                        onChange={(e) => updateWebAi({ openaiApiKey: e.target.value })}
+                                        placeholder="sk-..."
+                                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm focus:outline-none focus:border-white/30 transition-colors"
+                                        style={{ color: 'var(--text-primary)' }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
 
             {/* Section 4: Configurations Import/Export (New feature) */}
             <section>

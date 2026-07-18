@@ -1,6 +1,7 @@
 import { DualTheme } from "../types";
 import { applyStoredAnimationIntensityToDualTheme } from "./themePreferences";
 import { sanitizeDualTheme } from "./themeSanitizer";
+import { getWebAiConfig } from "./webAiConfig";
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
@@ -26,15 +27,25 @@ export const generateThemeFromLyrics = async (
       return sanitizeDualTheme(dualTheme);
     }
 
-    const provider = import.meta.env.VITE_AI_PROVIDER;
+    // Web：用户自带 key（存于 webAiConfig），随请求走 SWA 无密钥中继（swa-api/）。
+    const webAi = getWebAiConfig();
+    const provider = webAi.provider;
+    const apiKey = provider === 'openai' ? webAi.openaiApiKey : webAi.geminiApiKey;
+    if (!apiKey) {
+      // 未配置 key：客户端直接抛出，交由 isMissingAiApiKeyError 捕获并回退内置主题，省一次注定失败的请求。
+      throw new Error(provider === 'openai' ? 'OpenAI API key is not configured' : 'Gemini API key is not configured');
+    }
     const endpoint = provider === 'openai' ? '/api/generate-theme_openai' : '/api/generate-theme';
+    const requestBody = provider === 'openai'
+      ? { lyricsText, ...options, apiKey, apiUrl: webAi.openaiApiUrl || undefined, apiModel: webAi.openaiApiModel || undefined }
+      : { lyricsText, ...options, apiKey };
 
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ lyricsText, ...options }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
