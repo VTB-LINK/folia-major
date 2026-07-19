@@ -8,7 +8,7 @@ import type { PlayerCapTimeBasis } from '../../utils/playerCapMapping';
 // src/components/obs/ObsPlayerCapSourceApp.tsx
 // Bootstrap entry: wires the PlayerCap source into the source-neutral ObsWebSourceApp shell.
 // Appearance is driven by URL params (including cfg); the PlayerCap connection params (host is
-// shared with parseObsWebParams, plus player/basis/sticky here) come from the URL too, since the
+// shared with parseObsWebParams, plus nxpcPlayer/nxpcBasis/nxpcSticky here) come from the URL too, since the
 // OBS browser context cannot read the main app's localStorage.
 
 const DEFAULT_PLAYERCAP_HOST = 'localhost:8765';
@@ -23,10 +23,10 @@ interface ObsPlayerCapExtras {
 const parsePlayerCapExtras = (search: string): ObsPlayerCapExtras => {
     const params = new URLSearchParams(search);
     return {
-        player: params.get('player')?.trim() || '',
-        timeBasis: params.get('basis') === 'timestamp' ? 'timestamp' : 'play_time',
-        // Lyrics sticky defaults on (matches the main window); only sticky=0 disables.
-        sticky: params.get('sticky') !== '0',
+        player: params.get('nxpcPlayer')?.trim() || '',
+        timeBasis: params.get('nxpcBasis') === 'timestamp' ? 'timestamp' : 'play_time',
+        // Lyrics sticky defaults on (matches the main window); only nxpcSticky=0 disables.
+        sticky: params.get('nxpcSticky') !== '0',
     };
 };
 

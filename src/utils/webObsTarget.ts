@@ -32,8 +32,8 @@ export function resolveWebObsTarget(): WebObsTarget | null {
   // basis play_time, sticky on) so default setups produce a clean URL.
   const host = s.playerCapHost && s.playerCapHost !== 'localhost:8765' ? s.playerCapHost : '';
   const extra: Record<string, string> = {};
-  if (s.playerCapPlayer) extra.player = s.playerCapPlayer;
-  if (s.playerCapTimeBasis === 'timestamp') extra.basis = 'timestamp';
-  if (s.playerCapSticky === false) extra.sticky = '0';
+  if (s.playerCapPlayer) extra.nxpcPlayer = s.playerCapPlayer;
+  if (s.playerCapTimeBasis === 'timestamp') extra.nxpcBasis = 'timestamp';
+  if (s.playerCapSticky === false) extra.nxpcSticky = '0';
   return { source, host, extra };
 }

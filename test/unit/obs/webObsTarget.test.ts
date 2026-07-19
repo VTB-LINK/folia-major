@@ -41,7 +41,7 @@ describe('resolveWebObsTarget', () => {
         expect(resolveWebObsTarget()).toEqual({ source: 'playercap', host: '', extra: {} });
     });
 
-    it('carries non-default playercap host/player/basis/sticky', () => {
+    it('carries non-default playercap host/nxpcPlayer/nxpcBasis/nxpcSticky', () => {
         useSettingsUiStore.setState({
             enablePlayerCapStage: true,
             playerCapHost: '192.168.1.9:8765',
@@ -52,7 +52,7 @@ describe('resolveWebObsTarget', () => {
         expect(resolveWebObsTarget()).toEqual({
             source: 'playercap',
             host: '192.168.1.9:8765',
-            extra: { player: 'foobar2000', basis: 'timestamp', sticky: '0' },
+            extra: { nxpcPlayer: 'foobar2000', nxpcBasis: 'timestamp', nxpcSticky: '0' },
         });
     });
 });

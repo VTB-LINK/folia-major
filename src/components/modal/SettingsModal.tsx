@@ -172,7 +172,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         subtitleFontFallbackFamilies,
         lyricFilterPattern,
         showOpenPanelCloseButton,
-        enableNowPlayingStage,
         handleToggleCoverColorBg: onToggleCoverColorBg,
         handleToggleStaticMode: onToggleStaticMode,
         handleToggleDisableHomeDynamicBackground: onToggleDisableHomeDynamicBackground,
@@ -693,13 +692,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const stageEnabled = Boolean(stageStatus?.modeEnabled);
     const activeStageSource = stageStatus?.source ?? stageSource;
     const stageHasActiveSession = Boolean(stageStatus?.lyricsSession || stageStatus?.mediaSession);
+    // now-playing 与 playercap 是互斥的舞台源：两颗状态指示都只认当前选中源 activeStageSource，
+    // 保证同一时刻至多显示一个（web 端即便两个 enable 标志同时为真，也以派生出的选中源为准）。
     const nowPlayingEnabled = Boolean(
         isElectron
             ? (stageStatus?.modeEnabled && activeStageSource === 'now-playing')
-            : enableNowPlayingStage
+            : activeStageSource === 'now-playing'
     );
     const nowPlayingConnected = nowPlayingEnabled && nowPlayingConnectionStatus === 'connected';
     const stageConnected = stageEnabled && activeStageSource === 'stage-api';
+    const playerCapEnabled = Boolean(
+        isElectron
+            ? (stageStatus?.modeEnabled && activeStageSource === 'playercap')
+            : activeStageSource === 'playercap'
+    );
+    const playerCapConnected = playerCapEnabled && playerCapConnectionStatus === 'connected';
     const integrationStatusItems = [
         ...(stageConnected
             ? [{
@@ -713,6 +720,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 key: 'now-playing',
                 label: nowPlayingConnected ? t('options.nowPlayingConnectedStatus') : t('options.nowPlayingDisconnectedStatus'),
                 tone: nowPlayingConnected ? 'success' as const : 'error' as const,
+            }]
+            : []),
+        ...(playerCapEnabled
+            ? [{
+                key: 'playercap',
+                label: playerCapConnected ? t('options.playerCapConnectedStatus') : t('options.playerCapDisconnectedStatus'),
+                tone: playerCapConnected ? 'success' as const : 'error' as const,
             }]
             : []),
     ];

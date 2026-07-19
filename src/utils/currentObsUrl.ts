@@ -21,7 +21,7 @@ export async function readEffectiveExportTheme(): Promise<DualTheme | null> {
 }
 
 // host may carry a source's non-default endpoint (empty = page default); extra carries
-// source-specific params (PlayerCap player/basis/sticky). Bakes the effective theme, the current
+// source-specific params (PlayerCap nxpcPlayer/nxpcBasis/nxpcSticky). Bakes the effective theme, the current
 // light/dark preference, and the transparent-background toggle (cfg carries only the theme sides,
 // so daylight/transparent/extra ride as separate params, keeping cfg the terminal URL segment). The
 // transparent param mirrors the toggle 1:1 — on → transparent=1, off → transparent=0 (background
@@ -33,6 +33,6 @@ export async function buildCurrentObsUrl(obsSource: string, host = '', extra?: R
   const mergedExtra: Record<string, string> = {};
   if (isDaylight) mergedExtra.daylight = '1';
   mergedExtra.transparent = transparentPlayerBackground ? '1' : '0';
-  Object.assign(mergedExtra, extra); // source-specific params (PlayerCap player/basis/sticky)
+  Object.assign(mergedExtra, extra); // source-specific params (PlayerCap nxpcPlayer/nxpcBasis/nxpcSticky)
   return buildObsSourceUrl(obsSource, compressConfig(config), host, mergedExtra);
 }

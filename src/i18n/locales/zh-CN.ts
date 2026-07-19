@@ -1040,6 +1040,8 @@ export default {
     "stageConnected": "Stage 已连接",
     "nowPlayingConnectedStatus": "Now Playing 已连接",
     "nowPlayingDisconnectedStatus": "Now Playing 未连接",
+    "playerCapConnectedStatus": "Nexus PlayerCap 已连接",
+    "playerCapDisconnectedStatus": "Nexus PlayerCap 未连接",
     "nowPlayingStatusLabel": "连接状态：{{status}}",
     "nowPlayingStatusHint": "固定连接 ws://localhost:9863/api/ws/lyric，请先在本机启动 now-playing 服务。",
     "lyricFilterRegex": "歌词过滤正则",

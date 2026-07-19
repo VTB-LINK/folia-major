@@ -1036,6 +1036,8 @@ export default {
     "stageConnected": "Stage connected",
     "nowPlayingConnectedStatus": "Now Playing connected",
     "nowPlayingDisconnectedStatus": "Now Playing not connected",
+    "playerCapConnectedStatus": "Nexus PlayerCap connected",
+    "playerCapDisconnectedStatus": "Nexus PlayerCap not connected",
     "nowPlayingStatusLabel": "Connection status: {{status}}",
     "nowPlayingStatusHint": "Connects to ws://localhost:9863/api/ws/lyric. Start the now-playing service first.",
     "lyricFilterRegex": "Lyric Filter Regex",

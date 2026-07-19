@@ -958,6 +958,8 @@ export default {
     "stageConnected": "Stage terhubung",
     "nowPlayingConnectedStatus": "Now Playing terhubung",
     "nowPlayingDisconnectedStatus": "Now Playing tidak terhubung",
+    "playerCapConnectedStatus": "Nexus PlayerCap terhubung",
+    "playerCapDisconnectedStatus": "Nexus PlayerCap tidak terhubung",
     "nowPlayingStatusLabel": "Status koneksi: {{status}}",
     "nowPlayingStatusHint": "Terhubung ke ws://localhost:9863/api/ws/lyric. Mulai layanan now-playing terlebih dahulu.",
     "lyricFilterRegex": "Filter Lirik Regex",

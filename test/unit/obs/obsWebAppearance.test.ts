@@ -147,10 +147,10 @@ describe('buildObsSourceUrl', () => {
     });
 
     it('keeps the long cfg blob last, after source-specific extra params', () => {
-        const url = buildObsSourceUrl('playercap', 'folia-theme://abc', 'lan:8765', { player: 'cloudmusicv3', basis: 'timestamp' });
-        // cfg always comes last; technical params (host/player/basis) go up front for readability.
-        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('player='));
-        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('basis='));
+        const url = buildObsSourceUrl('playercap', 'folia-theme://abc', 'lan:8765', { nxpcPlayer: 'cloudmusicv3', nxpcBasis: 'timestamp' });
+        // cfg always comes last; technical params (host/nxpcPlayer/nxpcBasis) go up front for readability.
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('nxpcPlayer='));
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('nxpcBasis='));
         expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('host='));
         // cfg is the final segment: no &param follows it (guaranteed structurally, not by convention).
         expect(url.slice(url.indexOf('cfg=')).includes('&')).toBe(false);
