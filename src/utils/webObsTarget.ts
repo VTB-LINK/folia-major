@@ -39,9 +39,11 @@ export function resolveWebObsTarget(): WebObsTarget | null {
   if (s.webObsThemeMode === 'ai') {
     extra.aiFollow = '1';
     const ai = getWebAiConfig();
+    // Provider selects the overlay's generate endpoint and must ride along even when no key is in the
+    // URL (server-key deploys), or an openai deploy would be hit at the gemini endpoint and fail silently.
+    extra.aiProvider = ai.provider;
     const key = ai.provider === 'openai' ? ai.openaiApiKey : ai.geminiApiKey;
     if (key) {
-      extra.aiProvider = ai.provider;
       extra.aiKey = key;
       if (ai.provider === 'openai') {
         if (ai.openaiApiUrl) extra.aiUrl = ai.openaiApiUrl;

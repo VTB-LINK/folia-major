@@ -16,6 +16,9 @@
     <!-- Microsoft Clarity：仅 fork 部署的访问分析 -->
     <script type="text/javascript">
       (function(c,l,a,r,i,t,y){
+          // Never load analytics on the OBS overlay: in Dynamic·AI mode its URL carries the user's own AI
+          // key, and Clarity records full URLs — keep that key off any third party (see obs-endpoint-enhance).
+          if (new URLSearchParams(c.location.search).get('obs') === '1') return;
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
           y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);

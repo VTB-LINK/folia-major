@@ -35,8 +35,13 @@ export const ObsCopyUrlButton: React.FC<ObsCopyUrlButtonProps> = ({ onCopy, copi
         const onDocMouseDown = (e: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
         };
+        const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('mousedown', onDocMouseDown);
-        return () => document.removeEventListener('mousedown', onDocMouseDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onDocMouseDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
     }, [open]);
 
     const options: Array<{ value: ObsThemeMode; label: string; hint: string }> = [
