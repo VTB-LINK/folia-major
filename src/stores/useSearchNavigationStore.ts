@@ -162,9 +162,15 @@ const getInitialHomeViewTab = (): HomeViewTab => {
         return 'playlist';
     }
     const savedTab = localStorage.getItem(LAST_HOME_VIEW_TAB_KEY);
-    return savedTab === 'playlist' || savedTab === 'local' || savedTab === 'albums' || savedTab === 'navidrome' || savedTab === 'radio'
+    const resolved: HomeViewTab = savedTab === 'playlist' || savedTab === 'local' || savedTab === 'albums' || savedTab === 'navidrome' || savedTab === 'radio'
         ? savedTab
         : 'playlist';
+    // The public web build hides the online music-source tabs; land on local rather than an invisible tab.
+    const isElectron = Boolean((window as { electron?: unknown }).electron);
+    if (!isElectron && (resolved === 'playlist' || resolved === 'albums' || resolved === 'radio')) {
+        return 'local';
+    }
+    return resolved;
 };
 
 export const useSearchNavigationStore = create<SearchNavigationState>((set, get) => ({

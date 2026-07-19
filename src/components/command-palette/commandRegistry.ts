@@ -723,6 +723,14 @@ export const getAvailableCommandPaletteCommands = (context?: CommandPaletteConte
         }
     }
 
+    // Online music-source home tabs are hidden on the public web build; Electron keeps them.
+    if (command.id === 'home-playlist' || command.id === 'home-albums' || command.id === 'home-radio') {
+        const isElectron = typeof window !== 'undefined' && Boolean((window as { electron?: unknown }).electron);
+        if (!isElectron) {
+            return false;
+        }
+    }
+
     if (command.id === 'playback-auto-match-best-lyric') {
         return Boolean(context?.enableAlternativeLyricSources);
     }

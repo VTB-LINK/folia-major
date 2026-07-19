@@ -488,6 +488,8 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
     const inputBg = isDaylight ? 'bg-black/5 focus:bg-black/10' : 'bg-white/5 focus:bg-white/10';
     const navPillBg = isDaylight ? 'bg-black/5' : 'bg-white/10';
     const navPillInactiveText = isDaylight ? 'text-black/60 hover:text-black' : 'text-white/60 hover:text-white';
+    // Online music-source tabs are hidden on the public web build; Electron keeps them.
+    const isElectron = typeof window !== 'undefined' && Boolean((window as { electron?: unknown }).electron);
     const activeTabBg = isDaylight ? 'text-black font-bold' : 'text-black';
 
     const bottomPadding = currentTrack ? 'pb-28 md:pb-32' : '';
@@ -585,9 +587,11 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
                         <div className={`relative ${navPillBg} backdrop-blur-md p-1 rounded-full scale-90 md:scale-100 origin-center`}>
                             <div className="inline-flex items-center gap-0">
                                 {[
-                                    { key: 'playlist', label: t('home.playlists') },
-                                    { key: 'radio', label: t('home.radio') },
-                                    { key: 'albums', label: t('home.albums') },
+                                    ...(isElectron ? [
+                                        { key: 'playlist', label: t('home.playlists') },
+                                        { key: 'radio', label: t('home.radio') },
+                                        { key: 'albums', label: t('home.albums') },
+                                    ] : []),
                                     { key: 'local', label: t('localMusic.folder') },
                                     ...(navidromeEnabled ? [{ key: 'navidrome', label: t('navidrome.title') || 'Navidrome' }] : []),
                                 ].map((tab) => {
