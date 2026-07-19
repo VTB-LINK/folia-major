@@ -4,8 +4,8 @@ import { buildObsAppearanceFromShortcode, parseObsWebParams } from '@/utils/obsW
 import { buildObsSourceUrl, extractCfgFromInput } from '@/utils/obsUrl';
 
 // test/unit/obs/obsWebAppearance.test.ts
-// OBS web appearance: round-trip of a cfg shortcode through compressConfig→decompress→mapping to VisualizerRenderer props,
-// plus URL param parsing, import unwrapping, and copy-link assembly.
+// OBS web 外观：cfg shortcode 经 compressConfig→decompress→映射到 VisualizerRenderer props 的 round-trip，
+// 以及 URL 入参解析、导入剥壳、复制链接组装。
 
 const sampleConfig = {
     theme: {
@@ -67,7 +67,7 @@ describe('buildObsAppearanceFromShortcode', () => {
 
     it('lets an explicit visualizer override win, ignoring an invalid one', () => {
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, visualizerOverride: 'classic' }).mode).toBe('classic');
-        // an invalid override falls back to the cfg's mode
+        // 非法覆盖回退到 cfg 的 mode
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, visualizerOverride: 'not-a-mode' }).mode).toBe('monet');
     });
 
@@ -134,7 +134,7 @@ describe('buildObsSourceUrl', () => {
         expect(url).toContain('obsSource=now-playing');
         expect(url).toContain('host=localhost%3A9863');
         expect(url).toContain('cfg=folia-theme');
-        // round-trip: unwrap cfg back out of the assembled URL.
+        // round-trip：从组装的 URL 再剥回 cfg。
         expect(extractCfgFromInput(url.startsWith('http') ? url : `https://x.test${url}`)).toBe('folia-theme://abc');
     });
 

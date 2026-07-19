@@ -87,7 +87,7 @@ const ONLINE_AUDIO_URL_REFRESH_BUFFER_MS = 60 * 1000;
 const PLAYER_CHROME_HIDDEN_STORAGE_KEY = 'player_chrome_hidden';
 const LOCAL_TAIL_DECODE_ERROR_TOLERANCE_SEC = 3;
 // Default Theme
-// Midnight ink wash
+// 午夜墨染
 const DEFAULT_THEME: Theme = {
     name: "Midnight Default",
     backgroundColor: "#09090b", // zinc-950
@@ -98,7 +98,7 @@ const DEFAULT_THEME: Theme = {
     animationIntensity: "normal"
 };
 
-// Daylight plain white
+// 日光素白
 const DAYLIGHT_THEME: Theme = {
     name: "Daylight Default",
     backgroundColor: "#f5f5f4", // stone-100 (Pearl White-ish)

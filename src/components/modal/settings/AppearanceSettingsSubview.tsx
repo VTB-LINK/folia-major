@@ -696,9 +696,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     };
 
     // Copy the OBS overlay URL for the selected web stage source: burn the current appearance into a
-    // link. Bakes daylight and the transparent-background toggle (on → transparent=1, off →
-    // transparent=0 with the background shown); PlayerCap carries its non-default connection params;
-    // warns when the link carries a custom font.
+    // link to paste into an OBS browser source. Bakes the current light/dark preference and the
+    // transparent-background toggle (on → transparent=1, off → transparent=0 with the background
+    // shown); PlayerCap carries its non-default connection params; warns when the link carries a
+    // custom font.
     const handleCopyObsUrl = async () => {
         const target = resolveWebObsTarget();
         if (!target) return;

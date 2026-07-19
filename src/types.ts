@@ -525,8 +525,8 @@ export const DIORAMA_PARTICLE_DENSITY_MIN = 96;
 export const DIORAMA_PARTICLE_DENSITY_MAX = 1536;
 export const DIORAMA_PARTICLE_DENSITY_STEP = 24;
 // Background dust motes PER LINE of the resident window (see dioramaMoteField.ts). The motes sit in a
-// shell around the flight axis, and the two axes are INDEPENDENT: circumference = motes around each ring,
-// radial = how many layers across the shell's thickness (inner→outer). Motes-per-line = circumference x radial; the window
+// shell around the flight axis, and the two axes are INDEPENDENT: 圆周 = motes around each ring, 径向 =
+// how many layers across the shell's thickness (inner→outer). Motes-per-line = 圆周 x 径向; the window
 // holds 8 lines, so MAX x MAX bounds the layer at 8*48*4 = 1536 points for low-end GPUs / OBS sources
 // however far the sliders are dragged. Default 28 x 2 = 56 matches the old single-slider default.
 export const DIORAMA_MOTE_CIRCUMFERENCE_MIN = 4;
@@ -560,24 +560,24 @@ export interface DioramaTuning {
   particleGlowIntensity: number;
   showParticles: boolean;
   /** Background dust shell, two INDEPENDENT axes (motes-per-line = the product; field clamps to its cap):
-   *  background-particle circumferential density = motes around each ring, background-particle radial density = layers across the shell thickness. */
+   *  背景粒子·圆周密度 = motes around each ring, 背景粒子·径向密度 = layers across the shell thickness. */
   backgroundParticleCircumference: number;
   backgroundParticleRadial: number;
-  /** Basic glow follow-sing: soft glow on the unit being sung. Independent toggle + strength. */
+  /** 普通辉光跟唱: soft glow on the unit being sung. Independent toggle + strength. */
   glowEnabled: boolean;
   glowIntensity: number;
-  /** Soul-drift follow-sing: a ghost copy of the sung glyph drifts out of the text. Independent toggle + strength. */
+  /** 灵魂出窍跟唱: a ghost copy of the sung glyph drifts out of the text. Independent toggle + strength. */
   soulEnabled: boolean;
   soulIntensity: number;
-  /** Current-glyph drift: a plain ON/OFF sub-switch of soul-drift. ON lets the glyph CURRENTLY being sung drift at the
-   *  same soul-drift strength as every other glyph; OFF holds it perfectly registered (no doubling / reading
+  /** 当前字漂移: a plain ON/OFF sub-switch of 灵魂出窍. ON lets the glyph CURRENTLY being sung drift at the
+   *  same 灵魂出窍强度 as every other glyph; OFF holds it perfectly registered (no doubling / reading
    *  obstruction) until it finishes, after which it detaches and flies like the rest. No strength of its
    *  own - it borrows soulIntensity. Only has a visible effect when soulEnabled. */
   soulActiveEnabled: boolean;
-  /** Gradient follow-sing: the line's fill progressively deepens with the sung progress. Independent toggle + strength. */
+  /** 渐变跟唱: the line's fill progressively deepens with the sung progress. Independent toggle + strength. */
   gradientEnabled: boolean;
   gradientIntensity: number;
-  /** Keyword coloring: the theme's `wordColors` keywords (written by the AI theme from the song's lyrics) become
+  /** 关键字着色: the theme's `wordColors` keywords (written by the AI theme from the song's lyrics) become
    *  the follow-sing TARGET colour of the units they cover - hidden until the singing reaches them, never
    *  a resting colour. Same source and matcher as every other visualizer. */
   keywordColoringEnabled: boolean;
@@ -873,8 +873,8 @@ export interface SongResult {
   };
   ar?: Artist[];
   dt?: number; // duration in ms
-  alia?: string[]; // aliases
-  tns?: string[]; // translated names
+  alia?: string[]; // 别名
+  tns?: string[]; // 翻译名
   fee?: number;
   noCopyrightRcmd?: NoCopyrightRecommendation | null;
   resourceState?: boolean;

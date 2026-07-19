@@ -7,10 +7,10 @@ import type { NavidromeServerProfile } from '../../../types/navidrome';
 import type { ObsBrowserSourceStatus } from '../../../types/obsBrowserSource';
 import type { PlayerCapConnectionStatus } from '../../../types/playerCap';
 import { CustomSelect } from '../../shared/CustomSelect';
-import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 import { buildCurrentObsUrl } from '../../../utils/currentObsUrl';
 import { resolveWebObsTarget } from '../../../utils/webObsTarget';
 import { hasCustomObsFont } from '../../../utils/visualSettingsConfig';
+import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 
 // src/components/modal/settings/IntegrationSettingsSubview.tsx
 // Integration settings for Discord, Stage, Now Playing, OBS, and Navidrome.
@@ -147,6 +147,7 @@ const IntegrationSettingsSubview: React.FC<IntegrationSettingsSubviewProps> = ({
         return t('options.updateCheckDisabled');
     };
     const [obsAddressCopied, setObsAddressCopied] = useState(false);
+    const [obsUrlCopied, setObsUrlCopied] = useState(false);
     // PlayerCap config: the subview reads the store directly (fewer layers); connection state/players are passed in by the stage model.
     const {
         playerCapHost,
@@ -211,7 +212,6 @@ const IntegrationSettingsSubview: React.FC<IntegrationSettingsSubviewProps> = ({
     // Whether the web stage is enabled (stageSource is derived by the controller from the store's two toggles: null means disabled).
     const webStageEnabled = stageSource === 'now-playing' || stageSource === 'playercap';
 
-    const [obsUrlCopied, setObsUrlCopied] = useState(false);
     // Copy the OBS overlay URL for the selected web stage source (Now Playing / PlayerCap).
     const handleCopyObsUrl = async () => {
         const target = resolveWebObsTarget();

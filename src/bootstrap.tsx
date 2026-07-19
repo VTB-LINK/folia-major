@@ -20,8 +20,7 @@ const root = ReactDOM.createRoot(rootElement);
 const searchParams = new URLSearchParams(window.location.search);
 const isObsBrowserSource = searchParams.get('obs') === '1' || window.location.pathname === '/obs';
 const obsSource = searchParams.get('obsSource');
-// obsSource=now-playing / playercap: browser-direct static OBS overlays that connect to their
-// source in the browser (no Electron SSE relay); otherwise fall back to the Electron-relayed page.
+// obsSource=now-playing / playercap: static OBS overlay that connects directly to NowPlaying / PlayerCap in the browser (no Electron SSE relay).
 const isNowPlayingObsSource = isObsBrowserSource && obsSource === 'now-playing';
 const isPlayerCapObsSource = isObsBrowserSource && obsSource === 'playercap';
 root.render(

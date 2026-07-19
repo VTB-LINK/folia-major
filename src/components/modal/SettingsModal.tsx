@@ -1232,7 +1232,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-center gap-2 mt-6 mb-2 text-xs font-mono text-center">
-                                        {/* Row 1: the original version-info button */}
+                                        {/* 第一行：原本的版本信息按钮 */}
                                         <button
                                             type="button"
                                             onClick={handleCopyVersionInfo}
@@ -1246,7 +1246,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 : `${__APP_VERSION_LABEL__} v${__APP_VERSION__} - ${__GIT_BRANCH__} - ${__COMMIT_HASH__}`}
                                         </button>
 
-                                        {/* Row 2: new-version notice and action buttons */}
+                                        {/* 第二行：发现新版本与操作按钮 */}
                                         {updateStatus?.availableVersion && (
                                             <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 mt-0.5">
                                                 <span className="text-amber-500 font-semibold">
@@ -1304,7 +1304,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                         )}
 
-                                        {/* Row 3: small-print reminder for domestic (China) network */}
+                                        {/* 第三行：国内网络提醒小字 */}
                                         {updateStatus?.availableVersion && (
                                             <div className="text-xs opacity-45 mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                                                 {t('options.chinaDownloadHint')}
@@ -2244,7 +2244,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                                     {/* Web stage sources (Now Playing / PlayerCap) are selected uniformly in Integration Settings; see IntegrationSettingsSubview. */}
 
-                                    {/* Keep the Lab entry at the very bottom of the options list; the Electron build also adds desktop-only settings, so this must come after Electron Settings. */}
+                                    {/* 保持实验室入口位于整个 options 列表最底部；Electron 版本下还会多出桌面端专属设置，所以这里必须放在 Electron Settings 之后。 */}
                                     <section>
                                         <button
                                             type="button"
