@@ -16,6 +16,7 @@ import {
 } from '../../../types';
 import { applyVisualizerTuningsToSettings } from '../../visualizer/tuningRegistry';
 import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
+import { ObsCopyUrlButton } from '../../shared/ObsCopyUrlButton';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { buildObsSourceUrl, extractCfgFromInput } from '../../../utils/obsUrl';
@@ -703,7 +704,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     const handleCopyObsUrl = async () => {
         const target = resolveWebObsTarget();
         if (!target) return;
-        const code = compressConfig(buildCurrentConfig());
+        const config = buildCurrentConfig();
+        // Dynamic OBS theme modes ('builtin'/'ai') bake no theme so the overlay resolves one per song; 'static' burns it in.
+        if (useSettingsUiStore.getState().webObsThemeMode !== 'static') config.theme = null;
+        const code = compressConfig(config);
         // daylight + transparent baked into extra (before cfg); PlayerCap host/params come from the resolved target.
         const extra: Record<string, string> = {};
         if (isDaylight) extra.daylight = '1';
@@ -1095,6 +1099,12 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                         <Palette size={14} /> {t('options.aiProvider') || 'AI Provider'}
                     </h3>
                     <div className={`p-4 rounded-xl border space-y-4 ${settingsCardClass}`}>
+                        <div
+                            className="text-[11px] leading-relaxed rounded-lg px-3 py-2 border"
+                            style={{ color: 'var(--text-secondary)', borderColor: 'rgba(250, 204, 21, 0.3)', backgroundColor: 'rgba(250, 204, 21, 0.08)' }}
+                        >
+                            {t('options.obsAiKeyLeakWarning')}
+                        </div>
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="space-y-1">
                                 <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -1270,16 +1280,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                             <span>{copiedType === 'json' ? (t('status.copied')) : t('options.copyJson')}</span>
                         </button>
                         {!isElectron && (
-                            <button
-                                type="button"
-                                onClick={handleCopyObsUrl}
+                            <ObsCopyUrlButton
+                                onCopy={handleCopyObsUrl}
+                                copied={copiedType === 'obsurl'}
                                 disabled={webObsSource === null}
-                                className="px-3 py-2 bg-white/10 hover:bg-white/15 active:bg-white/5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                                style={{ color: 'var(--text-primary)' }}
-                            >
-                                {copiedType === 'obsurl' ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
-                                <span>{copiedType === 'obsurl' ? (t('status.copied')) : t('options.copyObsUrl')}</span>
-                            </button>
+                            />
                         )}
                         <div className="flex-1 min-w-[20px]" />
                         <button

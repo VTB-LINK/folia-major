@@ -3,6 +3,7 @@ import type { VisualizerTuningBundle } from '../components/visualizer/tuningRegi
 import type { VisualizerBackgroundConfig } from '../components/visualizer/backgrounds/definition';
 import { DEFAULT_VISUALIZER_MODE, hasVisualizerMode } from '../components/visualizer/registry';
 import { decompressConfig } from '../components/modal/settings/AppearanceSettingsSubview';
+import type { ObsAiConfig } from '../services/gemini';
 
 // src/utils/obsWebAppearance.ts
 // Parse the OBS URL params (including the appearance cfg shortcode) into the appearance
@@ -56,6 +57,25 @@ export function parseObsWebParams(search: string): ObsWebParams {
     transparent: params.get('transparent') === '1',
     visualizer: params.get('visualizer')?.trim() || '',
   };
+}
+
+// Dynamic·AI overlay params (obs-endpoint-enhance): returns the AI connection when aiFollow=1, else
+// null. The key/url/model are read raw (no sanitize) since they are opaque secrets; on a server-key
+// deploy they are absent and the endpoint uses its own env key. Kept separate from the appearance cfg.
+export function parseObsAiParams(search: string): ObsAiConfig | null {
+  const params = new URLSearchParams(search);
+  if (params.get('aiFollow') !== '1') return null;
+  const provider = params.get('aiProvider') === 'openai' ? 'openai' : 'gemini';
+  const config: ObsAiConfig = { provider };
+  const apiKey = params.get('aiKey')?.trim();
+  if (apiKey) config.apiKey = apiKey;
+  if (provider === 'openai') {
+    const apiUrl = params.get('aiUrl')?.trim();
+    const apiModel = params.get('aiModel')?.trim();
+    if (apiUrl) config.apiUrl = apiUrl;
+    if (apiModel) config.apiModel = apiModel;
+  }
+  return config;
 }
 
 interface BuildAppearanceOptions {

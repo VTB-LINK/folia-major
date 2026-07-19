@@ -73,6 +73,15 @@ const getStoredString = (key: string, fallback: string) => {
     return localStorage.getItem(key) || fallback;
 };
 
+// OBS overlay theme mode for the copied web OBS URL (default 'builtin' — per-song follow):
+//   'static'  – bake the current theme into cfg (the original behavior; frozen in OBS).
+//   'builtin' – bake no theme; the overlay derives a per-song builtin palette from the cover.
+//   'ai'      – like 'builtin', plus the overlay regenerates an AI theme per song (opt-in).
+const readStoredWebObsThemeMode = (): 'static' | 'builtin' | 'ai' => {
+    const value = getStoredString('web_obs_theme_mode', 'builtin');
+    return value === 'static' || value === 'ai' ? value : 'builtin';
+};
+
 const readStoredDisableHomeDynamicBackground = (): boolean => {
     if (typeof window === 'undefined') {
         return false;
@@ -1035,6 +1044,8 @@ export type SettingsUiState = {
     playerCapPlayer: string;
     playerCapTimeBasis: 'timestamp' | 'play_time';
     playerCapSticky: boolean;
+    // Theme mode baked into the copied web OBS URL (static burn-in vs per-song dynamic; see readStoredWebObsThemeMode).
+    webObsThemeMode: 'static' | 'builtin' | 'ai';
     queueAddBehavior: QueueAddBehavior;
     audioOutputDeviceId: string;
     volume: number;
@@ -1154,6 +1165,7 @@ export type SettingsUiState = {
     setPlayerCapPlayer: (player: string) => void;
     setPlayerCapTimeBasis: (basis: 'timestamp' | 'play_time') => void;
     setPlayerCapSticky: (sticky: boolean) => void;
+    setWebObsThemeMode: (mode: 'static' | 'builtin' | 'ai') => void;
     handleSetQueueAddBehavior: (behavior: QueueAddBehavior) => void;
     handleSetAudioOutputDeviceId: (deviceId: string) => void;
     handleSetVolume: (val: number) => void;
@@ -1242,6 +1254,7 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
     playerCapPlayer: getStoredString('playercap_player', ''),
     playerCapTimeBasis: getStoredString('playercap_time_basis', 'play_time') === 'timestamp' ? 'timestamp' : 'play_time',
     playerCapSticky: getStoredBoolean('playercap_sticky', true),
+    webObsThemeMode: readStoredWebObsThemeMode(),
     queueAddBehavior: readStoredQueueAddBehavior(),
     audioOutputDeviceId: readStoredAudioOutputDeviceId(),
     volume: readStoredVolume(),
@@ -2170,6 +2183,10 @@ export const useSettingsUiStore = create<SettingsUiState>((set, get) => ({
         setStoredBoolean('playercap_sticky', sticky);
         set({ playerCapSticky: sticky });
     },
+    setWebObsThemeMode: (mode) => {
+        localStorage.setItem('web_obs_theme_mode', mode);
+        set({ webObsThemeMode: mode });
+    },
     handleToggleNowPlayingStage: (enable) => {
         setStoredBoolean('enable_now_playing_stage', enable);
         set({ enableNowPlayingStage: enable });
@@ -2320,6 +2337,7 @@ export const selectSettingsUiSnapshot = (state: SettingsUiState) => ({
     playerCapPlayer: state.playerCapPlayer,
     playerCapTimeBasis: state.playerCapTimeBasis,
     playerCapSticky: state.playerCapSticky,
+    webObsThemeMode: state.webObsThemeMode,
     queueAddBehavior: state.queueAddBehavior,
     audioOutputDeviceId: state.audioOutputDeviceId,
     loopMode: state.loopMode,

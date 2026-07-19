@@ -28,8 +28,11 @@ export async function readEffectiveExportTheme(): Promise<DualTheme | null> {
 // shown); the overlay reads an absent param the same as transparent=0, so the default matches the
 // toggle 100%.
 export async function buildCurrentObsUrl(obsSource: string, host = '', extra?: Record<string, string>): Promise<string> {
-  const config = { theme: await readEffectiveExportTheme(), ...buildVisualSettingsConfig() };
-  const { isDaylight, transparentPlayerBackground } = useSettingsUiStore.getState();
+  const { isDaylight, transparentPlayerBackground, webObsThemeMode } = useSettingsUiStore.getState();
+  // Dynamic modes ('builtin'/'ai') bake no theme, so the overlay resolves one per song (cover-derived
+  // builtin, plus a regenerated AI theme under 'ai'); 'static' burns the current effective theme as before.
+  const theme = webObsThemeMode === 'static' ? await readEffectiveExportTheme() : null;
+  const config = { theme, ...buildVisualSettingsConfig() };
   const mergedExtra: Record<string, string> = {};
   if (isDaylight) mergedExtra.daylight = '1';
   mergedExtra.transparent = transparentPlayerBackground ? '1' : '0';
