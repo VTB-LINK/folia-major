@@ -15,6 +15,7 @@ import DesktopSettingsSubview from './settings/DesktopSettingsSubview';
 import GeneralSettingsSubview from './settings/GeneralSettingsSubview';
 import IntegrationSettingsSubview from './settings/IntegrationSettingsSubview';
 import { FORK_SOURCE_URL, FORK_SOURCE_LABEL } from '../../utils/forkSource';
+import type { PlayerCapConnectionStatus } from '../../types/playerCap';
 import LabSettingsModal from './settings/LabSettingsModal';
 import PlaybackSettingsSubview from './settings/PlaybackSettingsSubview';
 import StorageSettingsSection from './settings/StorageSettingsSection';
@@ -56,6 +57,8 @@ interface SettingsModalProps {
     onClearStageState?: () => Promise<void> | void;
     onToggleNowPlayingStage?: (enabled: boolean) => Promise<void> | void;
     nowPlayingConnectionStatus?: NowPlayingConnectionStatus;
+    playerCapConnectionStatus?: PlayerCapConnectionStatus;
+    playerCapPlayers?: string[];
     obsBrowserSourceStatus?: ObsBrowserSourceStatus | null;
     onToggleObsBrowserSource?: (enabled: boolean) => Promise<void> | void;
     onRegenerateObsBrowserSourceToken?: () => Promise<void> | void;
@@ -97,6 +100,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onClearStageState,
     onToggleNowPlayingStage,
     nowPlayingConnectionStatus = 'disabled',
+    playerCapConnectionStatus = 'idle',
+    playerCapPlayers = [],
     obsBrowserSourceStatus = null,
     onToggleObsBrowserSource,
     onRegenerateObsBrowserSourceToken,
@@ -1201,7 +1206,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-center gap-2 mt-6 mb-2 text-xs font-mono text-center">
-                                        {/* 第一行：原本的版本信息按钮 */}
+                                        {/* Row 1: the original version-info button */}
                                         <button
                                             type="button"
                                             onClick={handleCopyVersionInfo}
@@ -1215,7 +1220,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                 : `${__APP_VERSION_LABEL__} v${__APP_VERSION__} - ${__GIT_BRANCH__} - ${__COMMIT_HASH__}`}
                                         </button>
 
-                                        {/* 第二行：发现新版本与操作按钮 */}
+                                        {/* Row 2: new-version notice and action buttons */}
                                         {updateStatus?.availableVersion && (
                                             <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 mt-0.5">
                                                 <span className="text-amber-500 font-semibold">
@@ -1273,7 +1278,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             </div>
                                         )}
 
-                                        {/* 第三行：国内网络提醒小字 */}
+                                        {/* Row 3: small-print reminder for domestic (China) network */}
                                         {updateStatus?.availableVersion && (
                                             <div className="text-xs opacity-45 mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                                                 {t('options.chinaDownloadHint')}
@@ -2192,44 +2197,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         </section>
                                     )}
 
-                                    {!isElectron && (
-                                        <section>
-                                            <h3 className="text-sm font-bold uppercase tracking-wider opacity-50 mb-4 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                                                <Server size={14} /> 舞台
-                                            </h3>
-                                            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <div className="space-y-1">
-                                                        <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                                                            启用 Now Playing
-                                                        </div>
-                                                        <div className="text-[10px] opacity-40 max-w-[320px]" style={{ color: 'var(--text-secondary)' }}>
-                                                            开启后首页显示舞台入口，并通过本机 localhost 连接 now-playing 服务。
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => void onToggleNowPlayingStage?.(!enableNowPlayingStage)}
-                                                        className={`w-12 h-6 rounded-full p-1 transition-colors ${!enableNowPlayingStage ? toggleOffBackgroundClass : ''}`}
-                                                        style={{ backgroundColor: enableNowPlayingStage ? theme?.secondaryColor || 'rgba(114, 119, 134, 1)' : undefined }}
-                                                    >
-                                                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${enableNowPlayingStage ? 'translate-x-6' : 'translate-x-0'}`} />
-                                                    </button>
-                                                </div>
-                                                {enableNowPlayingStage && (
-                                                    <div className="rounded-xl border border-white/10 bg-white/5 p-3 space-y-2">
-                                                        <div className="text-[10px] uppercase tracking-[0.16em] opacity-40" style={{ color: 'var(--text-secondary)' }}>
-                                                            Now Playing
-                                                        </div>
-                                                        <div className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                                                            连接状态：{nowPlayingStatusLabel}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </section>
-                                    )}
+                                    {/* Web stage sources (Now Playing / PlayerCap) are selected uniformly in Integration Settings; see IntegrationSettingsSubview. */}
 
-                                    {/* 保持实验室入口位于整个 options 列表最底部；Electron 版本下还会多出桌面端专属设置，所以这里必须放在 Electron Settings 之后。 */}
+                                    {/* Keep the Lab entry at the very bottom of the options list; the Electron build also adds desktop-only settings, so this must come after Electron Settings. */}
                                     <section>
                                         <button
                                             type="button"
@@ -2594,15 +2564,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             status: discordPresenceStatus,
                         }}
                         stage={{
-                            enableNowPlayingStage,
                             nowPlayingConnectionStatus,
+                            playerCapConnectionStatus,
+                            playerCapPlayers,
                             obsBrowserSourceStatus,
                             onCopyText: copyText,
                             onRegenerateObsBrowserSourceToken,
                             onRegenerateStageToken,
                             onStageSourceChange,
                             onToggleObsBrowserSource,
-                            onToggleNowPlayingStage,
                             onToggleStageMode,
                             setStageActionStatus,
                             setStageAddressCopied,

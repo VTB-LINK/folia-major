@@ -30,6 +30,15 @@ export interface ObsWebAppearance {
   hideTranslationSubtitle?: boolean;
   showSubtitleTranslation?: boolean;
   subtitleOverlayBackground?: boolean;
+  // Font stack (raw store fields; overlaid onto the theme in ObsWebSourceApp so fonts match the
+  // main window). Only a system custom font's family transfers (uploaded fonts do not).
+  lyricsFontStyle?: Theme['fontStyle'];
+  lyricsCustomFontFamily?: string | null;
+  lyricsFontFallbackFamilies?: string[];
+  subtitleFontInheritsLyrics?: boolean;
+  subtitleFontStyle?: Theme['fontStyle'];
+  subtitleFontFamily?: string | null;
+  subtitleFontFallbackFamilies?: string[];
   background: VisualizerBackgroundConfig;
 }
 
@@ -42,8 +51,9 @@ export function parseObsWebParams(search: string): ObsWebParams {
     cfg: params.get('cfg'),
     // OBS overlay defaults to the dark theme; only daylight=1 picks the light side.
     isDaylight: params.get('daylight') === '1',
-    // OBS overlay defaults to transparent; only transparent=0 uses the opaque theme background.
-    transparent: params.get('transparent') !== '0',
+    // Absent and transparent=0 both show the opaque theme background — matching the
+    // transparent-player-background toggle's default (off); only transparent=1 makes it transparent.
+    transparent: params.get('transparent') === '1',
     visualizer: params.get('visualizer')?.trim() || '',
   };
 }
@@ -104,6 +114,15 @@ export function buildObsAppearanceFromShortcode(
     hideTranslationSubtitle: decoded?.hidePlayerTranslationSubtitle,
     showSubtitleTranslation: decoded?.showSubtitleTranslation,
     subtitleOverlayBackground: decoded?.subtitleOverlayBackground,
+    lyricsFontStyle: decoded?.lyricsFontStyle,
+    lyricsCustomFontFamily: decoded?.lyricsCustomFontFamily,
+    // Guard the fallback arrays like urlBackgroundList: a hand-edited cfg with a non-array value
+    // would otherwise be spread into the font stack and throw during render, blanking the overlay.
+    lyricsFontFallbackFamilies: Array.isArray(decoded?.lyricsFontFallbackFamilies) ? decoded.lyricsFontFallbackFamilies : undefined,
+    subtitleFontInheritsLyrics: decoded?.subtitleFontInheritsLyrics,
+    subtitleFontStyle: decoded?.subtitleFontStyle,
+    subtitleFontFamily: decoded?.subtitleFontFamily,
+    subtitleFontFallbackFamilies: Array.isArray(decoded?.subtitleFontFallbackFamilies) ? decoded.subtitleFontFallbackFamilies : undefined,
     background,
   };
 }

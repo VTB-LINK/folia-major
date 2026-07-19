@@ -87,7 +87,7 @@ const ONLINE_AUDIO_URL_REFRESH_BUFFER_MS = 60 * 1000;
 const PLAYER_CHROME_HIDDEN_STORAGE_KEY = 'player_chrome_hidden';
 const LOCAL_TAIL_DECODE_ERROR_TOLERANCE_SEC = 3;
 // Default Theme
-// 午夜墨染
+// Midnight ink wash
 const DEFAULT_THEME: Theme = {
     name: "Midnight Default",
     backgroundColor: "#09090b", // zinc-950
@@ -98,7 +98,7 @@ const DEFAULT_THEME: Theme = {
     animationIntensity: "normal"
 };
 
-// 日光素白
+// Daylight plain white
 const DAYLIGHT_THEME: Theme = {
     name: "Daylight Default",
     backgroundColor: "#f5f5f4", // stone-100 (Pearl White-ish)
@@ -358,6 +358,11 @@ export default function App() {
         lyricFilterPattern,
         showOpenPanelCloseButton,
         enableNowPlayingStage,
+        enablePlayerCapStage,
+        playerCapHost,
+        playerCapPlayer,
+        playerCapTimeBasis,
+        playerCapSticky,
         queueAddBehavior,
         audioOutputDeviceId,
         loopMode,
@@ -855,6 +860,10 @@ export default function App() {
         nowPlayingPaused,
         nowPlayingDebugInfo,
         isNowPlayingStageActive,
+        isPlayerCapStageActive,
+        getPlayerCapDisplayTime,
+        playerCapConnectionStatus,
+        playerCapPlayers,
         mainPlaybackSnapshotRef,
         stageLyricsClockRef,
         syncStageLyricsClock,
@@ -873,6 +882,11 @@ export default function App() {
         isDev,
         isElectronWindow,
         enableNowPlayingStage,
+        enablePlayerCapStage,
+        playerCapHost,
+        playerCapPlayer,
+        playerCapTimeBasis,
+        playerCapSticky,
         activePlaybackContext,
         setActivePlaybackContext,
         currentSong,
@@ -1385,6 +1399,7 @@ export default function App() {
         duration,
         effectiveLoopMode,
         isNowPlayingStageActive,
+        isPlayerCapStageActive,
         stageActiveEntryKind,
         stageLyricsSession,
         stageLyricsClockRef,
@@ -1393,6 +1408,7 @@ export default function App() {
         getSyntheticStageLyricsTime,
         syncStageLyricsClock,
         getNowPlayingDisplayTime,
+        getPlayerCapDisplayTime,
         syncNowPlayingClock,
         lyricTimelineOffsetMs,
         lyricCurrentTime,
@@ -2591,6 +2607,8 @@ export default function App() {
         clearPersistedStagePlaybackCache,
         loadStageSessionIntoPlayback,
         nowPlayingConnectionStatus,
+        playerCapConnectionStatus,
+        playerCapPlayers,
         obsBrowserSourceStatus,
         refreshObsBrowserSourceStatus,
         onAudioOutputDeviceChange: handleAudioOutputDeviceChange,
@@ -2608,6 +2626,8 @@ export default function App() {
         loadCurrentSongLyricPreview,
         loadStageSessionIntoPlayback,
         nowPlayingConnectionStatus,
+        playerCapConnectionStatus,
+        playerCapPlayers,
         obsBrowserSourceStatus,
         refreshObsBrowserSourceStatus,
         settingsModalState,
@@ -2960,7 +2980,11 @@ export default function App() {
                 <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center px-6">
                     <div className={`max-w-lg rounded-3xl border px-6 py-5 text-center backdrop-blur-md ${isDaylight ? 'border-black/10 bg-white/50 text-zinc-800' : 'border-white/10 bg-black/30 text-white'}`}>
                         <div className="text-xs uppercase tracking-[0.22em] opacity-50">
-                            {stageSource === 'now-playing' ? 'Stage · Now Playing' : 'Stage · Stage API'}
+                            {stageSource === 'now-playing'
+                                ? 'Stage · Now Playing'
+                                : stageSource === 'playercap'
+                                    ? 'Stage · Nexus PlayerCap'
+                                    : 'Stage · Stage API'}
                         </div>
                         <div className="mt-3 text-2xl font-semibold">
                             {stageSource === 'now-playing'
@@ -2968,11 +2992,13 @@ export default function App() {
                                 : t('options.stageSessionEmpty')}
                         </div>
                         <div className="mt-2 text-sm opacity-70">
-                            {stageSource === 'now-playing'
-                                ? (nowPlayingConnectionStatus === 'error'
-                                    ? t('options.stageConnectionError')
-                                    : t('options.stageNotRunning'))
-                                : t('options.enableStageModeDesc')}
+                            {stageSource === 'playercap'
+                                ? (playerCapConnectionStatus === 'connected' ? t('options.playerCapWaitingLyrics') : t('options.playerCapConnecting'))
+                                : stageSource === 'now-playing'
+                                    ? (nowPlayingConnectionStatus === 'error'
+                                        ? t('options.stageConnectionError')
+                                        : t('options.stageNotRunning'))
+                                    : t('options.enableStageModeDesc')}
                         </div>
                     </div>
                 </div>

@@ -4,8 +4,8 @@ import { buildObsAppearanceFromShortcode, parseObsWebParams } from '@/utils/obsW
 import { buildObsSourceUrl, extractCfgFromInput } from '@/utils/obsUrl';
 
 // test/unit/obs/obsWebAppearance.test.ts
-// OBS web 外观：cfg shortcode 经 compressConfig→decompress→映射到 VisualizerRenderer props 的 round-trip，
-// 以及 URL 入参解析、导入剥壳、复制链接组装。
+// OBS web appearance: round-trip of a cfg shortcode through compressConfig→decompress→mapping to VisualizerRenderer props,
+// plus URL param parsing, import unwrapping, and copy-link assembly.
 
 const sampleConfig = {
     theme: {
@@ -67,7 +67,7 @@ describe('buildObsAppearanceFromShortcode', () => {
 
     it('lets an explicit visualizer override win, ignoring an invalid one', () => {
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, visualizerOverride: 'classic' }).mode).toBe('classic');
-        // 非法覆盖回退到 cfg 的 mode
+        // an invalid override falls back to the cfg's mode
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, visualizerOverride: 'not-a-mode' }).mode).toBe('monet');
     });
 
@@ -98,14 +98,15 @@ describe('parseObsWebParams', () => {
         expect(p.host).toBe('localhost:9863');
         expect(p.cfg).toBe('folia-theme://abc');
         expect(p.isDaylight).toBe(true);
-        expect(p.transparent).toBe(true); // 默认透明
+        expect(p.transparent).toBe(false); // 缺省=显示背景
         expect(p.visualizer).toBe('cadenza');
     });
 
-    it('defaults to dark + transparent, and opaque only when transparent=0', () => {
+    it('defaults to dark + background (opaque), and transparent only when transparent=1', () => {
         expect(parseObsWebParams('').isDaylight).toBe(false);
-        expect(parseObsWebParams('').transparent).toBe(true);
+        expect(parseObsWebParams('').transparent).toBe(false); // 缺省当 transparent=0
         expect(parseObsWebParams('?transparent=0').transparent).toBe(false);
+        expect(parseObsWebParams('?transparent=1').transparent).toBe(true);
     });
 
     it('sanitizes host, stripping characters that would break the ws URL', () => {
@@ -133,7 +134,27 @@ describe('buildObsSourceUrl', () => {
         expect(url).toContain('obsSource=now-playing');
         expect(url).toContain('host=localhost%3A9863');
         expect(url).toContain('cfg=folia-theme');
-        // round-trip：从组装的 URL 再剥回 cfg。
+        // round-trip: unwrap cfg back out of the assembled URL.
         expect(extractCfgFromInput(url.startsWith('http') ? url : `https://x.test${url}`)).toBe('folia-theme://abc');
+    });
+
+    it('carries extra params (daylight/transparent) ahead of the terminal cfg', () => {
+        const url = buildObsSourceUrl('now-playing', 'folia-theme://abc', '', { daylight: '1', transparent: '0' });
+        expect(url).toContain('daylight=1');
+        expect(url).toContain('transparent=0');
+        // cfg stays last so trailing technical params never wrap the copied link.
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('transparent=0'));
+    });
+
+    it('keeps the long cfg blob last, after source-specific extra params', () => {
+        const url = buildObsSourceUrl('playercap', 'folia-theme://abc', 'lan:8765', { player: 'cloudmusicv3', basis: 'timestamp' });
+        // cfg always comes last; technical params (host/player/basis) go up front for readability.
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('player='));
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('basis='));
+        expect(url.indexOf('cfg=')).toBeGreaterThan(url.indexOf('host='));
+        // cfg is the final segment: no &param follows it (guaranteed structurally, not by convention).
+        expect(url.slice(url.indexOf('cfg=')).includes('&')).toBe(false);
+        // order-independent parsing can still unwrap cfg.
+        expect(extractCfgFromInput(`https://x.test${url}`)).toBe('folia-theme://abc');
     });
 });

@@ -19,7 +19,8 @@ import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { buildObsSourceUrl, extractCfgFromInput } from '../../../utils/obsUrl';
-import { buildVisualSettingsConfig } from '../../../utils/visualSettingsConfig';
+import { resolveWebObsTarget, selectWebObsSource } from '../../../utils/webObsTarget';
+import { buildVisualSettingsConfig, hasCustomObsFont } from '../../../utils/visualSettingsConfig';
 
 // src/components/modal/settings/AppearanceSettingsSubview.tsx
 // Visual settings subview for theme presets, lyric renderer entry, layout settings, and configurations import/export.
@@ -366,6 +367,7 @@ export const compressConfig = (config: any): string => {
     if (config.lyricsFontStyle) minified.lfs = config.lyricsFontStyle;
     if (config.lyricsFontScale !== undefined) minified.lfn = config.lyricsFontScale;
     if (config.lyricsFontFallbackFamilies?.length) minified.lff = config.lyricsFontFallbackFamilies;
+    if (config.lyricsCustomFontFamily) minified.lcf = config.lyricsCustomFontFamily;
     if (config.subtitleFontInheritsLyrics !== undefined) minified.sfi = config.subtitleFontInheritsLyrics;
     if (config.subtitleFontStyle) minified.sfs = config.subtitleFontStyle;
     if (config.subtitleFontFamily) minified.sff = config.subtitleFontFamily;
@@ -448,6 +450,7 @@ export const decompressConfig = (str: string): any => {
         if (parsed.lfs) decompressed.lyricsFontStyle = parsed.lfs;
         if (parsed.lfn !== undefined) decompressed.lyricsFontScale = parsed.lfn;
         if (parsed.lff) decompressed.lyricsFontFallbackFamilies = parsed.lff;
+        if (parsed.lcf) decompressed.lyricsCustomFontFamily = parsed.lcf;
         if (parsed.sfi !== undefined) decompressed.subtitleFontInheritsLyrics = parsed.sfi;
         if (parsed.sfs) decompressed.subtitleFontStyle = parsed.sfs;
         if (parsed.sff) decompressed.subtitleFontFamily = parsed.sff;
@@ -539,8 +542,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     customTheme,
 }) => {
     const { t } = useTranslation();
-    // Web-only feature gate (OBS static URL copy + AI provider): Electron has no shareable web URL and uses desktop settings.
+    // Web-only feature gate (OBS static URL copy + AI provider): Electron has no shareable web URL and
+    // uses desktop settings. The OBS link follows the selected web stage source (Now Playing / PlayerCap);
+    // disabled when none is on.
     const isElectron = typeof window !== 'undefined' && Boolean((window as { electron?: unknown }).electron);
+    const webObsSource = useSettingsUiStore(selectWebObsSource);
     const [importText, setImportText] = useState('');
     const [copiedType, setCopiedType] = useState<'none' | 'shortcode' | 'json' | 'obsurl'>('none');
 
@@ -689,16 +695,26 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         }
     };
 
-    // Copy the NowPlaying OBS overlay URL: burn the current appearance into a link to paste into an OBS browser source.
+    // Copy the OBS overlay URL for the selected web stage source: burn the current appearance into a
+    // link. Bakes daylight and the transparent-background toggle (on → transparent=1, off →
+    // transparent=0 with the background shown); PlayerCap carries its non-default connection params;
+    // warns when the link carries a custom font.
     const handleCopyObsUrl = async () => {
+        const target = resolveWebObsTarget();
+        if (!target) return;
         const code = compressConfig(buildCurrentConfig());
-        // Omit host so the OBS page uses its own default endpoint (single source for the default).
-        const url = buildObsSourceUrl('now-playing', code, '');
+        // daylight + transparent baked into extra (before cfg); PlayerCap host/params come from the resolved target.
+        const extra: Record<string, string> = {};
+        if (isDaylight) extra.daylight = '1';
+        extra.transparent = transparentPlayerBackground ? '1' : '0';
+        const url = buildObsSourceUrl(target.source, code, target.host, { ...extra, ...target.extra });
         try {
             await navigator.clipboard.writeText(url);
             setCopiedType('obsurl');
             setTimeout(() => setCopiedType('none'), 2000);
-            store.statusSetter?.({ type: 'success', text: t('status.copied') });
+            store.statusSetter?.(hasCustomObsFont()
+                ? { type: 'info', text: t('options.obsUrlCustomFontHint') }
+                : { type: 'success', text: t('status.copied') });
         } catch (err) {
             console.error('Failed to copy OBS URL:', err);
         }
@@ -1256,7 +1272,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                             <button
                                 type="button"
                                 onClick={handleCopyObsUrl}
-                                className="px-3 py-2 bg-white/10 hover:bg-white/15 active:bg-white/5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5"
+                                disabled={webObsSource === null}
+                                className="px-3 py-2 bg-white/10 hover:bg-white/15 active:bg-white/5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                                 style={{ color: 'var(--text-primary)' }}
                             >
                                 {copiedType === 'obsurl' ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
