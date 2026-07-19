@@ -217,7 +217,8 @@ export default async function viteConfig({ mode }: ConfigEnv): Promise<UserConfi
         registerType: 'autoUpdate',
         includeAssets: ['icon.svg'],
         devOptions: {
-          enabled: true
+          // SW disabled in dev: avoids stale-cache surprises while developing (the prod build still ships the PWA).
+          enabled: false
         },
         workbox: {
           maximumFileSizeToCacheInBytes: 5000000
