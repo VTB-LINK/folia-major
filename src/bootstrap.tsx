@@ -6,6 +6,7 @@ import App from './App';
 import RemoteControlApp from './components/remote/RemoteControlApp';
 import ObsBrowserSourceApp from './components/obs/ObsBrowserSourceApp';
 import ObsNowPlayingSourceApp from './components/obs/ObsNowPlayingSourceApp';
+import ObsPlayerCapSourceApp from './components/obs/ObsPlayerCapSourceApp';
 
 // src/bootstrap.tsx
 // Mounts the React app after index.tsx installs runtime-level browser shims.
@@ -18,16 +19,21 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 const searchParams = new URLSearchParams(window.location.search);
 const isObsBrowserSource = searchParams.get('obs') === '1' || window.location.pathname === '/obs';
-// obsSource=now-playing: static OBS overlay that connects directly to NowPlaying in the browser (no Electron SSE relay).
-const isNowPlayingObsSource = isObsBrowserSource && searchParams.get('obsSource') === 'now-playing';
+const obsSource = searchParams.get('obsSource');
+// obsSource=now-playing / playercap: browser-direct static OBS overlays that connect to their
+// source in the browser (no Electron SSE relay); otherwise fall back to the Electron-relayed page.
+const isNowPlayingObsSource = isObsBrowserSource && obsSource === 'now-playing';
+const isPlayerCapObsSource = isObsBrowserSource && obsSource === 'playercap';
 root.render(
   <React.StrictMode>
     {isNowPlayingObsSource
       ? <ObsNowPlayingSourceApp />
-      : isObsBrowserSource
-        ? <ObsBrowserSourceApp />
-        : searchParams.get('remote') === '1'
-          ? <RemoteControlApp />
-          : <App />}
+      : isPlayerCapObsSource
+        ? <ObsPlayerCapSourceApp />
+        : isObsBrowserSource
+          ? <ObsBrowserSourceApp />
+          : searchParams.get('remote') === '1'
+            ? <RemoteControlApp />
+            : <App />}
   </React.StrictMode>
 );
