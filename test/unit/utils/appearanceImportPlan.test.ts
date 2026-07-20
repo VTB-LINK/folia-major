@@ -71,6 +71,35 @@ describe('buildImportPlan', () => {
         expect(keys(p)).toEqual(['classicTuning', 'dioramaTuning']);
     });
 
+    // Only a system family is portable, so the config can never carry the uploaded font it evicts.
+    it('warns that accepting a font family discards an uploaded one', () => {
+        const p = buildImportPlan({
+            incoming: { lyricsCustomFontFamily: 'Comic Sans MS' },
+            current: {},
+            switches: unpinned,
+            customFontSource: 'uploaded',
+        });
+        expect(p.changes).toContainEqual({
+            group: 'fonts',
+            key: 'uploadedLyricsFont',
+            from: true,
+            to: false,
+            derived: true,
+        });
+    });
+
+    it('does not warn about an uploaded font when there is none', () => {
+        for (const customFontSource of ['system', null, undefined] as const) {
+            const p = buildImportPlan({
+                incoming: { lyricsCustomFontFamily: 'Comic Sans MS' },
+                current: {},
+                switches: unpinned,
+                customFontSource,
+            });
+            expect(p.changes.some(c => c.key === 'uploadedLyricsFont')).toBe(false);
+        }
+    });
+
     it('surfaces the unpinning that accepting auto-switch implies', () => {
         const p = plan({ songThemeAutoSwitchEnabled: true, songThemeAutoGenerateEnabled: false }, {}, pinned);
         const derived = p.changes.find(c => c.derived);

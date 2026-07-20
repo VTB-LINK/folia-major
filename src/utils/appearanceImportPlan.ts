@@ -58,6 +58,7 @@ const FIELD_GROUPS: Record<string, ImportGroup> = {
     lyricsFontStyle: 'fonts',
     lyricsFontScale: 'fonts',
     lyricsFontFallbackFamilies: 'fonts',
+    lyricsCustomFontFamily: 'fonts',
     subtitleFontInheritsLyrics: 'fonts',
     subtitleFontStyle: 'fonts',
     subtitleFontFamily: 'fonts',
@@ -109,9 +110,13 @@ export interface ImportPlanInput {
     current: Record<string, unknown>;
     // Drives the derived song-theme changes; isCustomThemePreferred is not a config field.
     switches: ThemePreferenceSwitchState;
+    // Only a system font family is portable, so an uploaded font is never in the config — but
+    // accepting a family replaces it and deletes the stored file. Pass the current source so that
+    // loss can be shown rather than discovered afterwards.
+    customFontSource?: 'system' | 'uploaded' | null;
 }
 
-export function buildImportPlan({ incoming, current, switches }: ImportPlanInput): ImportPlan {
+export function buildImportPlan({ incoming, current, switches, customFontSource }: ImportPlanInput): ImportPlan {
     const changes: ImportChange[] = [];
 
     // The theme is applied whole (save + apply), so it is one change rather than a per-colour diff.
@@ -128,6 +133,18 @@ export function buildImportPlan({ incoming, current, switches }: ImportPlanInput
         if (bundled && BUNDLED_TUNING_FIELDS.has(key)) continue;
         if (isSameValue(incoming[key], current[key])) continue;
         changes.push({ group, key, from: current[key], to: incoming[key] });
+    }
+
+    // Derived: taking a system font family evicts an uploaded one, and the stored file is deleted
+    // with it. The config cannot carry an uploaded font, so this loss is invisible in the diff above.
+    if (incoming.lyricsCustomFontFamily && customFontSource === 'uploaded') {
+        changes.push({
+            group: 'fonts',
+            key: 'uploadedLyricsFont',
+            from: true,
+            to: false,
+            derived: true,
+        });
     }
 
     // Derived: replay the resolvers in the order the import applies them, threading the state so the
