@@ -66,6 +66,31 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
     latentBackgroundTuning: 'options.importFieldLatentBackgroundTuning',
 };
 
+// Leaf settings inside a tuning object, keyed by `<field>.<path>` so a name that repeats across
+// renderers cannot pick up the wrong label. These already exist in the settings panel — a slider the
+// user can see named "图片水平偏移" should not read as backgroundHalfPaneOffsetX here. Anything not
+// listed falls back to the name the code uses, which is still better than inventing one.
+const LEAF_LABEL_KEYS: Record<string, string> = {
+    'monetBackgroundTuning.backgroundSource': 'options.monetBackgroundSource',
+    'monetBackgroundTuning.backgroundLayout': 'options.monetBackgroundLayout',
+    'monetBackgroundTuning.backgroundHalfPaneOffsetX': 'options.monetHalfPaneOffsetX',
+    'monetBackgroundTuning.backgroundBlurPx': 'options.monetBackgroundBlur',
+    'monetBackgroundTuning.backgroundOverlayOpacity': 'options.monetBackgroundOverlayOpacity',
+    'monetBackgroundTuning.backgroundGrayscale': 'options.monetBackgroundGrayscale',
+    'monetBackgroundTuning.backgroundSaturation': 'options.monetBackgroundSaturation',
+    'monetBackgroundTuning.backgroundWash': 'options.monetBackgroundWash',
+    'monetBackgroundTuning.backgroundWashColorMode': 'options.monetBackgroundWashColorMode',
+    'monetBackgroundTuning.backgroundWashCustomColor': 'options.monetBackgroundWashCustomColor',
+    'latentBackgroundTuning.ditheringSize': 'options.latentDitheringSize',
+    'latentBackgroundTuning.ditheringOpacity': 'options.latentDitheringOpacity',
+    'latentBackgroundTuning.meshSwirl': 'options.latentMeshSwirl',
+    'monetTuning.keywordColoringEnabled': 'options.monetKeywordColoring',
+    'monetTuning.portraitSource': 'options.monetPortraitSource',
+    'monetTuning.portraitStyle': 'options.monetPortraitStyle',
+    'monetTuning.showPortraitDragHanger': 'options.monetPortraitDragHanger',
+    'monetTuning.audioStyle': 'options.monetAudioStyle',
+};
+
 // The per-renderer tunings borrow the renderer's own display name instead of inventing one.
 const TUNING_MODES: Record<string, string> = {
     classicTuning: 'classic',
@@ -240,16 +265,19 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
 
                 {opaque && open && (
                     <ul className={`mt-1 space-y-1 border-l pl-3 ${isDaylight ? 'border-zinc-900/10' : 'border-white/10'}`}>
-                        {children.map(child => (
+                        {children.map((child) => {
+                            const labelKey = LEAF_LABEL_KEYS[`${change.key}.${child.key}`];
+                            return (
                             <li key={child.key} className="flex items-center gap-2">
-                                {/* Internal setting names: no label exists, and inventing one per slider
-                                    would be worse than showing the name the code uses. */}
-                                <span className={`min-w-0 flex-1 truncate font-mono text-[11px] ${mutedColor}`}>{child.key}</span>
+                                <span className={`min-w-0 flex-1 truncate ${mutedColor} ${labelKey ? 'text-xs' : 'font-mono text-[11px]'}`}>
+                                    {labelKey ? t(labelKey) : child.key}
+                                </span>
                                 {renderValue(child.from, false)}
                                 <span className={`shrink-0 ${mutedColor}`}>→</span>
                                 {renderValue(child.to, !on)}
                             </li>
-                        ))}
+                            );
+                        })}
                     </ul>
                 )}
             </li>
@@ -360,7 +388,10 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                             <div className="mt-2 space-y-2">
                                 {Object.entries(unchangedByGroup).map(([group, rows]) => (
                                     <div key={group}>
-                                        <div className={`text-[11px] ${mutedColor}`}>{t(GROUP_LABEL_KEYS[group as ImportGroup])}</div>
+                                        {/* A heading must not be smaller than the rows it heads. */}
+                                        <div className={`text-xs font-medium ${isDaylight ? 'text-zinc-600' : 'text-zinc-300'}`}>
+                                            {t(GROUP_LABEL_KEYS[group as ImportGroup])}
+                                        </div>
                                         <ul className="mt-1 space-y-1.5">
                                             {rows.map(change => (
                                                 <li key={change.key} className="flex items-center gap-2 text-xs">
