@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compressConfig } from '@/utils/appearanceCodec';
-import { buildObsAppearanceFromShortcode, parseObsWebParams } from '@/utils/obsWebAppearance';
+import { buildObsAppearanceFromShortcode, parseObsAiParams, parseObsWebParams } from '@/utils/obsWebAppearance';
 import { buildObsSourceUrl, extractCfgFromInput } from '@/utils/obsUrl';
 
 // test/unit/obs/obsWebAppearance.test.ts
@@ -65,6 +65,26 @@ describe('buildObsAppearanceFromShortcode', () => {
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: true, transparent: true }).theme?.name).toBe('Light X');
     });
 
+    // obsTheme is authoritative: the dynamic modes resolve per song in the shell, so they must drop
+    // a baked theme rather than freeze on it. A missing marker means a link that predates it, and
+    // has to keep inferring the mode from the payload.
+    it('drops a baked theme under the dynamic modes', () => {
+        for (const themeMode of ['builtin', 'ai'] as const) {
+            expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, themeMode }).theme).toBeNull();
+        }
+    });
+
+    it('keeps a baked theme under static, and infers the mode when unstated', () => {
+        expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, themeMode: 'static' }).theme?.name).toBe('Dark X');
+        expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, themeMode: null }).theme?.name).toBe('Dark X');
+        expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true }).theme?.name).toBe('Dark X');
+    });
+
+    it('resolves dynamically when static states itself but carries no theme', () => {
+        const cfg = JSON.stringify({ visualizerMode: 'monet' });
+        expect(buildObsAppearanceFromShortcode(cfg, { isDaylight: false, transparent: false, themeMode: 'static' }).theme).toBeNull();
+    });
+
     it('lets an explicit visualizer override win, ignoring an invalid one', () => {
         expect(buildObsAppearanceFromShortcode(shortcode, { isDaylight: false, transparent: true, visualizerOverride: 'classic' }).mode).toBe('classic');
         // 非法覆盖回退到 cfg 的 mode
@@ -112,6 +132,43 @@ describe('parseObsWebParams', () => {
     it('sanitizes host, stripping characters that would break the ws URL', () => {
         expect(parseObsWebParams('?host=localhost%3A9863%23').host).toBe('localhost:9863'); // trailing '#'
         expect(parseObsWebParams('?host=local%20host%3A9863').host).toBe('localhost:9863'); // internal space
+    });
+
+    it('reads the obsTheme mode, treating absent and unknown values alike', () => {
+        expect(parseObsWebParams('?obsTheme=static').themeMode).toBe('static');
+        expect(parseObsWebParams('?obsTheme=builtin').themeMode).toBe('builtin');
+        expect(parseObsWebParams('?obsTheme=ai').themeMode).toBe('ai');
+        expect(parseObsWebParams('').themeMode).toBeNull();
+        expect(parseObsWebParams('?obsTheme=nonsense').themeMode).toBeNull();
+    });
+});
+
+describe('parseObsAiParams', () => {
+    it('returns the connection only under obsTheme=ai', () => {
+        expect(parseObsAiParams('?obsTheme=ai')).toEqual({ provider: 'gemini' });
+        expect(parseObsAiParams('?obsTheme=builtin&aiKey=k')).toBeNull();
+        expect(parseObsAiParams('?obsTheme=static&aiKey=k')).toBeNull();
+        expect(parseObsAiParams('?aiKey=k')).toBeNull();
+    });
+
+    // aiFollow was the old gate; obsTheme=ai replaced it, and links carry the mode marker either way.
+    it('ignores a bare aiFollow flag', () => {
+        expect(parseObsAiParams('?aiFollow=1&aiKey=k')).toBeNull();
+    });
+
+    it('carries the key, and the openai-only url/model', () => {
+        expect(parseObsAiParams('?obsTheme=ai&aiKey=%20k%20')).toEqual({ provider: 'gemini', apiKey: 'k' });
+        expect(parseObsAiParams('?obsTheme=ai&aiProvider=openai&aiKey=k&aiUrl=https%3A%2F%2Fx.test&aiModel=m'))
+            .toEqual({ provider: 'openai', apiKey: 'k', apiUrl: 'https://x.test', apiModel: 'm' });
+        // gemini has no url/model of its own, so they are dropped rather than passed through.
+        expect(parseObsAiParams('?obsTheme=ai&aiKey=k&aiUrl=https%3A%2F%2Fx.test&aiModel=m'))
+            .toEqual({ provider: 'gemini', apiKey: 'k' });
+    });
+
+    // Server-key deploys put no key in the URL; the provider still has to ride along or the overlay
+    // would hit the wrong generate endpoint.
+    it('keeps the provider when no key is present', () => {
+        expect(parseObsAiParams('?obsTheme=ai&aiProvider=openai')).toEqual({ provider: 'openai' });
     });
 });
 

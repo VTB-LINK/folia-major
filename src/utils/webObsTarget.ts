@@ -29,15 +29,15 @@ export function resolveWebObsTarget(): WebObsTarget | null {
   const source = selectWebObsSource(s);
   if (!source) return null;
   const extra: Record<string, string> = {};
-  // Explicit mode marker (static | builtin | ai) so the mode is readable from the URL's technical
-  // params (ahead of cfg) at a glance; the overlay behaves the same whether or not it reads it.
+  // The mode marker (static | builtin | ai) is authoritative: the overlay resolves its theme from
+  // this, not from whether cfg happens to carry one. It rides ahead of cfg, so the mode of a link
+  // already pasted into OBS stays readable — and editable — without going back to the app.
   extra.obsTheme = s.webObsThemeMode;
-  // Dynamic·AI (source-neutral): flag the overlay to regenerate per song, and — on the fork's keyless
-  // relay — carry the user's own AI key so the overlay (a separate browser context that can't read
-  // webAiConfig) can generate. Server-key deploys leave the key out and the endpoint uses its env key.
-  // All ride in `extra` (before cfg), i.e. the leading part OBS's URL field scrolls out of view.
+  // Dynamic·AI (source-neutral): on the fork's keyless relay, carry the user's own AI key so the
+  // overlay (a separate browser context that can't read webAiConfig) can generate. Server-key
+  // deploys leave the key out and the endpoint uses its env key. All ride in `extra` (before cfg),
+  // i.e. the leading part OBS's URL field scrolls out of view.
   if (s.webObsThemeMode === 'ai') {
-    extra.aiFollow = '1';
     const ai = getWebAiConfig();
     // Provider selects the overlay's generate endpoint and must ride along even when no key is in the
     // URL (server-key deploys), or an openai deploy would be hit at the gemini endpoint and fail silently.

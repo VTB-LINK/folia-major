@@ -12,12 +12,23 @@ import type { ObsAiConfig } from '../services/gemini';
 // cover-color theme. Note decompressConfig emits store field names, so this maps them to
 // VisualizerRenderer prop names (e.g. visualizerMode -> mode).
 
+// How the copied link asks the overlay to resolve its theme (obs-endpoint-enhance): burn in the cfg
+// theme, derive a builtin palette per song, or regenerate one per song with AI.
+export type ObsThemeMode = 'static' | 'builtin' | 'ai';
+
+// Whitelist read: an absent or hand-mangled value is null, i.e. "no mode stated", never an error.
+const readObsThemeMode = (params: URLSearchParams): ObsThemeMode | null => {
+  const value = params.get('obsTheme');
+  return value === 'static' || value === 'builtin' || value === 'ai' ? value : null;
+};
+
 export interface ObsWebParams {
   host: string;
   cfg: string | null;
   isDaylight: boolean;
   transparent: boolean;
   visualizer: string; // single-mode override (empty = use the cfg's mode)
+  themeMode: ObsThemeMode | null; // null = link predates the marker; infer from cfg instead
 }
 
 export interface ObsWebAppearance {
@@ -56,15 +67,17 @@ export function parseObsWebParams(search: string): ObsWebParams {
     // transparent-player-background toggle's default (off); only transparent=1 makes it transparent.
     transparent: params.get('transparent') === '1',
     visualizer: params.get('visualizer')?.trim() || '',
+    themeMode: readObsThemeMode(params),
   };
 }
 
-// Dynamic·AI overlay params (obs-endpoint-enhance): returns the AI connection when aiFollow=1, else
-// null. The key/url/model are read raw (no sanitize) since they are opaque secrets; on a server-key
-// deploy they are absent and the endpoint uses its own env key. Kept separate from the appearance cfg.
+// Dynamic·AI overlay params (obs-endpoint-enhance): returns the AI connection under obsTheme=ai,
+// else null. The key/url/model are read raw (no sanitize) since they are opaque secrets; on a
+// server-key deploy they are absent and the endpoint uses its own env key. Kept separate from the
+// appearance cfg.
 export function parseObsAiParams(search: string): ObsAiConfig | null {
   const params = new URLSearchParams(search);
-  if (params.get('aiFollow') !== '1') return null;
+  if (readObsThemeMode(params) !== 'ai') return null;
   const provider = params.get('aiProvider') === 'openai' ? 'openai' : 'gemini';
   const config: ObsAiConfig = { provider };
   const apiKey = params.get('aiKey')?.trim();
@@ -82,11 +95,12 @@ interface BuildAppearanceOptions {
   isDaylight: boolean;
   transparent: boolean;
   visualizerOverride?: string;
+  themeMode?: ObsThemeMode | null;
 }
 
 export function buildObsAppearanceFromShortcode(
   cfg: string | null,
-  { isDaylight, transparent, visualizerOverride }: BuildAppearanceOptions,
+  { isDaylight, transparent, visualizerOverride, themeMode }: BuildAppearanceOptions,
 ): ObsWebAppearance {
   let decoded: any = null;
   if (cfg) {
@@ -103,7 +117,12 @@ export function buildObsAppearanceFromShortcode(
     ? visualizerOverride
     : (decoded?.visualizerMode && hasVisualizerMode(decoded.visualizerMode) ? decoded.visualizerMode : DEFAULT_VISUALIZER_MODE);
 
-  const theme: Theme | null = decoded?.theme
+  // The stated mode wins over the payload: the dynamic modes resolve a theme per song in the shell,
+  // so a cfg theme (a hand-edited link, or one whose mode was switched in place) must not freeze
+  // them. With no mode stated the link predates the marker, so fall back to inferring it from the
+  // payload — a baked theme meant static, none meant dynamic.
+  const isDynamicMode = themeMode === 'builtin' || themeMode === 'ai';
+  const theme: Theme | null = decoded?.theme && !isDynamicMode
     ? (isDaylight ? decoded.theme.light : decoded.theme.dark)
     : null;
 
