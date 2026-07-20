@@ -14,7 +14,7 @@ import { ObsCopyUrlButton } from '../../shared/ObsCopyUrlButton';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { compressConfig, decompressConfig, readSavedCustomTheme } from '../../../utils/appearanceCodec';
-import { buildImportPlan, type ImportGroup, type ImportPlan } from '../../../utils/appearanceImportPlan';
+import { buildImportPlan, THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportPlan } from '../../../utils/appearanceImportPlan';
 import { isFontFamilyAvailable } from '../../../utils/fontAvailability';
 import ImportConfirmDialog from './ImportConfirmDialog';
 import { extractCfgFromInput } from '../../../utils/obsUrl';
@@ -316,160 +316,140 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         }
     };
 
-    const applyImportedConfig = (config: any, groups: ImportGroup[]) => {
-        const has = (group: ImportGroup) => groups.includes(group);
+    // `keys` are the plan's change keys, which are the config field names apart from the two theme
+    // sides. Anything not picked is left exactly as it is.
+    const applyImportedConfig = (config: any, keys: string[]) => {
+        const has = (key: string) => keys.includes(key);
         try {
-            // 1. Restore Theme
-            if (has('theme') && config.theme) {
-                onSaveCustomTheme(config.theme);
+            // 1. Restore Theme, per side: taking someone's night colours must not drag their day
+            // ones along, so the side that was not picked keeps whatever is saved now.
+            if (config.theme && (has(THEME_LIGHT_KEY) || has(THEME_DARK_KEY))) {
+                const base = customTheme ?? config.theme;
+                onSaveCustomTheme({
+                    light: has(THEME_LIGHT_KEY) ? config.theme.light : base.light,
+                    dark: has(THEME_DARK_KEY) ? config.theme.dark : base.dark,
+                });
                 onApplyCustomTheme();
             }
 
             // 2. Restore Visualizer Setup
-            if (has('visualizer')) {
-                if (config.visualizerMode) {
-                    store.handleSetVisualizerMode(config.visualizerMode);
-                }
-                if (config.randomVisualizerModePerSong !== undefined) {
-                    store.handleToggleRandomVisualizerModePerSong(Boolean(config.randomVisualizerModePerSong));
-                }
-                if (config.visualizerOpacity !== undefined) {
-                    store.handleSetVisualizerOpacity(config.visualizerOpacity);
-                }
-                if (config.hidePlayerTranslationSubtitle !== undefined) {
-                    store.handleToggleHidePlayerTranslationSubtitle(Boolean(config.hidePlayerTranslationSubtitle));
-                }
-                if (config.showSubtitleTranslation !== undefined) {
-                    store.handleToggleShowSubtitleTranslation(Boolean(config.showSubtitleTranslation));
-                }
-                if (config.subtitleOverlayBackground !== undefined) {
-                    store.handleToggleSubtitleOverlayBackground(Boolean(config.subtitleOverlayBackground));
-                }
+            if (has('visualizerMode') && config.visualizerMode) {
+                store.handleSetVisualizerMode(config.visualizerMode);
+            }
+            if (has('randomVisualizerModePerSong')) {
+                store.handleToggleRandomVisualizerModePerSong(Boolean(config.randomVisualizerModePerSong));
+            }
+            if (has('visualizerOpacity')) {
+                store.handleSetVisualizerOpacity(config.visualizerOpacity);
+            }
+            if (has('hidePlayerTranslationSubtitle')) {
+                store.handleToggleHidePlayerTranslationSubtitle(Boolean(config.hidePlayerTranslationSubtitle));
+            }
+            if (has('showSubtitleTranslation')) {
+                store.handleToggleShowSubtitleTranslation(Boolean(config.showSubtitleTranslation));
+            }
+            if (has('subtitleOverlayBackground')) {
+                store.handleToggleSubtitleOverlayBackground(Boolean(config.subtitleOverlayBackground));
             }
 
-            if (has('background')) {
-                if (config.visualizerBackgroundMode) {
-                    store.handleSetVisualizerBackgroundMode(config.visualizerBackgroundMode);
-                }
-                if (config.backgroundOpacity !== undefined) {
-                    store.handleSetBackgroundOpacity(config.backgroundOpacity);
-                }
+            if (has('visualizerBackgroundMode') && config.visualizerBackgroundMode) {
+                store.handleSetVisualizerBackgroundMode(config.visualizerBackgroundMode);
+            }
+            if (has('backgroundOpacity')) {
+                store.handleSetBackgroundOpacity(config.backgroundOpacity);
             }
 
-            if (has('fonts')) {
-                if (config.lyricsFontStyle) {
-                    store.handleSetLyricsFontStyle(config.lyricsFontStyle);
-                }
-                if (config.lyricsFontScale !== undefined) {
-                    store.handleSetLyricsFontScale(config.lyricsFontScale);
-                }
-                if (config.lyricsFontFallbackFamilies) {
-                    store.handleSetLyricsFontFallbackFamilies(config.lyricsFontFallbackFamilies);
-                }
-                // Only a system family is portable. Setting one evicts an uploaded font and deletes
-                // its stored file, which is why the confirmation calls that out separately.
-                if (config.lyricsCustomFontFamily) {
-                    const family = String(config.lyricsCustomFontFamily);
-                    useSettingsUiStore.getState().handleSetLyricsCustomFont({ source: 'system', family, label: family });
-                }
-                if (config.subtitleFontInheritsLyrics !== undefined) {
-                    store.handleSetSubtitleFontInheritsLyrics(Boolean(config.subtitleFontInheritsLyrics));
-                }
-                if (config.subtitleFontStyle) {
-                    store.handleSetSubtitleFontStyle(config.subtitleFontStyle);
-                }
-                if (config.subtitleFontFamily !== undefined) {
-                    store.handleSetSubtitleFontFamily(config.subtitleFontFamily);
-                }
-                if (config.subtitleFontFallbackFamilies) {
-                    store.handleSetSubtitleFontFallbackFamilies(config.subtitleFontFallbackFamilies);
-                }
+            if (has('lyricsFontStyle') && config.lyricsFontStyle) {
+                store.handleSetLyricsFontStyle(config.lyricsFontStyle);
+            }
+            if (has('lyricsFontScale')) {
+                store.handleSetLyricsFontScale(config.lyricsFontScale);
+            }
+            if (has('lyricsFontFallbackFamilies') && config.lyricsFontFallbackFamilies) {
+                store.handleSetLyricsFontFallbackFamilies(config.lyricsFontFallbackFamilies);
+            }
+            // Only a system family is portable. Setting one evicts an uploaded font and deletes
+            // its stored file, which is why the confirmation calls that out separately.
+            if (has('lyricsCustomFontFamily') && config.lyricsCustomFontFamily) {
+                const family = String(config.lyricsCustomFontFamily);
+                useSettingsUiStore.getState().handleSetLyricsCustomFont({ source: 'system', family, label: family });
+            }
+            if (has('subtitleFontInheritsLyrics')) {
+                store.handleSetSubtitleFontInheritsLyrics(Boolean(config.subtitleFontInheritsLyrics));
+            }
+            if (has('subtitleFontStyle') && config.subtitleFontStyle) {
+                store.handleSetSubtitleFontStyle(config.subtitleFontStyle);
+            }
+            if (has('subtitleFontFamily')) {
+                store.handleSetSubtitleFontFamily(config.subtitleFontFamily);
+            }
+            if (has('subtitleFontFallbackFamilies') && config.subtitleFontFallbackFamilies) {
+                store.handleSetSubtitleFontFallbackFamilies(config.subtitleFontFallbackFamilies);
             }
 
-            // Tunings
-            if (has('visualizer')) {
-            if (config.visualizerTunings) {
+            // Tunings. The bundle wins over the individual ones, which is why the plan never offers
+            // both — picking the bundle is picking every renderer at once.
+            if (has('visualizerTunings') && config.visualizerTunings) {
                 applyVisualizerTuningsToSettings(store as unknown as Record<string, unknown>, config.visualizerTunings);
             }
-            if (!config.visualizerTunings && config.classicTuning) {
-                store.handleSetClassicTuning(config.classicTuning);
-            }
-            if (!config.visualizerTunings && config.cadenzaTuning) {
-                store.handleSetCadenzaTuning(config.cadenzaTuning);
-            }
-            if (!config.visualizerTunings && config.partitaTuning) {
-                store.handleSetPartitaTuning(config.partitaTuning);
-            }
-            if (!config.visualizerTunings && config.fumeTuning) {
-                store.handleSetFumeTuning(config.fumeTuning);
-            }
-            if (!config.visualizerTunings && config.claddaghTuning) {
-                store.handleSetCladdaghTuning(config.claddaghTuning);
-            }
-            if (!config.visualizerTunings && config.cappellaTuning) {
-                store.handleSetCappellaTuning(config.cappellaTuning);
-            }
-            if (!config.visualizerTunings && config.tiltTuning) {
-                store.handleSetTiltTuning(config.tiltTuning);
-            }
-            if (!config.visualizerTunings && config.dioramaTuning) {
-                store.handleSetDioramaTuning(config.dioramaTuning);
-            }
-            if (!config.visualizerTunings && config.monetTuning) {
-                store.handleSetMonetTuning(config.monetTuning);
-            }
+            if (!config.visualizerTunings) {
+                if (has('classicTuning') && config.classicTuning) store.handleSetClassicTuning(config.classicTuning);
+                if (has('cadenzaTuning') && config.cadenzaTuning) store.handleSetCadenzaTuning(config.cadenzaTuning);
+                if (has('partitaTuning') && config.partitaTuning) store.handleSetPartitaTuning(config.partitaTuning);
+                if (has('fumeTuning') && config.fumeTuning) store.handleSetFumeTuning(config.fumeTuning);
+                if (has('claddaghTuning') && config.claddaghTuning) store.handleSetCladdaghTuning(config.claddaghTuning);
+                if (has('cappellaTuning') && config.cappellaTuning) store.handleSetCappellaTuning(config.cappellaTuning);
+                if (has('tiltTuning') && config.tiltTuning) store.handleSetTiltTuning(config.tiltTuning);
+                if (has('dioramaTuning') && config.dioramaTuning) store.handleSetDioramaTuning(config.dioramaTuning);
+                if (has('monetTuning') && config.monetTuning) store.handleSetMonetTuning(config.monetTuning);
             }
 
-            if (has('background')) {
-                if (config.monetBackgroundTuning) {
-                    store.handleSetMonetBackgroundTuning(config.monetBackgroundTuning);
-                }
-                if (config.nomandBackgroundTuning) {
-                    store.handleSetNomandBackgroundTuning(config.nomandBackgroundTuning);
-                }
-                if (config.latentBackgroundTuning) {
-                    store.handleSetLatentBackgroundTuning(config.latentBackgroundTuning);
-                }
+            if (has('monetBackgroundTuning') && config.monetBackgroundTuning) {
+                store.handleSetMonetBackgroundTuning(config.monetBackgroundTuning);
+            }
+            if (has('nomandBackgroundTuning') && config.nomandBackgroundTuning) {
+                store.handleSetNomandBackgroundTuning(config.nomandBackgroundTuning);
+            }
+            if (has('latentBackgroundTuning') && config.latentBackgroundTuning) {
+                store.handleSetLatentBackgroundTuning(config.latentBackgroundTuning);
+            }
 
-                let mergedUrlList: UrlBackgroundItem[] | undefined;
+            let mergedUrlList: UrlBackgroundItem[] | undefined;
 
-                if (config.urlBackgroundList && Array.isArray(config.urlBackgroundList)) {
-                    // Batch merge: compute the final list once, then apply with a single
-                    // store update to avoid sequential localStorage writes per item.
-                    const existingMap = new Map(store.urlBackgroundList.map(i => [i.id, { ...i }]));
-                    for (const item of config.urlBackgroundList) {
-                        const sanitized = sanitizeUrlBackgroundItem(item);
-                        if (!sanitized) {
-                            continue;
-                        }
-
-                        const existing = existingMap.get(sanitized.id);
-                        existingMap.set(sanitized.id, {
-                            ...(existing ?? { id: sanitized.id }),
-                            url: sanitized.url,
-                            note: sanitized.note,
-                        });
+            if (has('urlBackgroundList') && config.urlBackgroundList && Array.isArray(config.urlBackgroundList)) {
+                // Batch merge: compute the final list once, then apply with a single
+                // store update to avoid sequential localStorage writes per item.
+                const existingMap = new Map(store.urlBackgroundList.map(i => [i.id, { ...i }]));
+                for (const item of config.urlBackgroundList) {
+                    const sanitized = sanitizeUrlBackgroundItem(item);
+                    if (!sanitized) {
+                        continue;
                     }
-                    mergedUrlList = Array.from(existingMap.values());
-                    store.handleSetUrlBackgroundList(mergedUrlList);
+
+                    const existing = existingMap.get(sanitized.id);
+                    existingMap.set(sanitized.id, {
+                        ...(existing ?? { id: sanitized.id }),
+                        url: sanitized.url,
+                        note: sanitized.note,
+                    });
                 }
-                // Validate that the imported selectedId still exists in the final list
-                // to avoid a dangling reference that renders UrlBackgroundLayer blank.
-                if (config.urlBackgroundSelectedId) {
-                    const list = mergedUrlList ?? store.urlBackgroundList;
-                    if (list.some(i => i.id === config.urlBackgroundSelectedId)) {
-                        store.handleSetUrlBackgroundSelectedId(config.urlBackgroundSelectedId);
-                    }
+                mergedUrlList = Array.from(existingMap.values());
+                store.handleSetUrlBackgroundList(mergedUrlList);
+            }
+            // Validate that the imported selectedId still exists in the final list
+            // to avoid a dangling reference that renders UrlBackgroundLayer blank.
+            if (has('urlBackgroundSelectedId') && config.urlBackgroundSelectedId) {
+                const list = mergedUrlList ?? store.urlBackgroundList;
+                if (list.some(i => i.id === config.urlBackgroundSelectedId)) {
+                    store.handleSetUrlBackgroundSelectedId(config.urlBackgroundSelectedId);
                 }
             }
 
-            if (has('songTheme')) {
-                if (config.songThemeAutoSwitchEnabled !== undefined) {
-                    onToggleSongThemeAutoSwitch(Boolean(config.songThemeAutoSwitchEnabled));
-                }
-                if (config.songThemeAutoGenerateEnabled !== undefined) {
-                    onToggleSongThemeAutoGenerate(Boolean(config.songThemeAutoGenerateEnabled));
-                }
+            if (has('songThemeAutoSwitchEnabled')) {
+                onToggleSongThemeAutoSwitch(Boolean(config.songThemeAutoSwitchEnabled));
+            }
+            if (has('songThemeAutoGenerateEnabled')) {
+                onToggleSongThemeAutoGenerate(Boolean(config.songThemeAutoGenerateEnabled));
             }
 
             store.statusSetter?.({ type: 'success', text: t('options.importSuccess') });
@@ -919,8 +899,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                 plan={pendingImport?.plan ?? null}
                 isDaylight={isDaylight}
                 onCancel={() => setPendingImport(null)}
-                onConfirm={(groups) => {
-                    if (pendingImport) applyImportedConfig(pendingImport.config, groups);
+                onConfirm={(keys) => {
+                    if (pendingImport) applyImportedConfig(pendingImport.config, keys);
                 }}
             />
         </div>

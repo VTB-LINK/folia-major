@@ -174,10 +174,80 @@ describe('buildImportPlan', () => {
         expect(p.changes.find(c => c.derived)).toMatchObject({ key: 'isCustomThemePreferred', to: false });
     });
 
-    it('treats the theme as one change and keeps the previous theme as its from-value', () => {
-        const current = { theme: { light: { name: 'Mine' }, dark: { name: 'Mine' } } };
-        const p = plan({ theme: { light: { name: 'Theirs' }, dark: { name: 'Theirs' } } }, current, unpinned);
-        expect(p.changes).toHaveLength(1);
-        expect(p.changes[0]).toMatchObject({ group: 'theme', key: 'theme', from: current.theme });
+    const side = (accentColor: string) => ({
+        backgroundColor: '#000000',
+        primaryColor: '#ffffff',
+        accentColor,
+        secondaryColor: '#888888',
+        fontStyle: 'sans',
+        animationIntensity: 'normal',
+    });
+
+    // Offered per side so someone's night colours can be taken without their day ones.
+    it('splits the theme into a light and a dark row', () => {
+        const current = { theme: { light: side('#111111'), dark: side('#111111') } };
+        const p = plan({ theme: { light: side('#ea580c'), dark: side('#0df1fe') } }, current, unpinned);
+        expect(keys(p)).toEqual(['themeLight', 'themeDark']);
+        expect(p.changes[0]).toMatchObject({ from: current.theme.light, to: side('#ea580c') });
+    });
+
+    it('offers only the side that actually differs', () => {
+        const p = plan(
+            { theme: { light: side('#ea580c'), dark: side('#0df1fe') } },
+            { theme: { light: side('#ea580c'), dark: side('#111111') } },
+            unpinned,
+        );
+        expect(keys(p)).toEqual(['themeDark']);
+        expect(p.unchanged.map(c => c.key)).toEqual(['themeLight']);
+    });
+
+    // A saved theme carries provider/description and empty word-colour lists that a hand-written or
+    // freshly decoded one does not. Reporting those would claim a change the user cannot see.
+    it('ignores theme metadata and empty-vs-absent lists', () => {
+        const saved = {
+            backgroundColor: '#f5f5f4', primaryColor: '#1c1917', accentColor: '#ea580c', secondaryColor: '#44403c',
+            fontStyle: 'sans', animationIntensity: 'normal', wordColors: [], lyricsIcons: [], provider: 'Custom', description: '',
+        };
+        const incoming = {
+            name: 'Whatever Else', backgroundColor: '#f5f5f4', primaryColor: '#1c1917', accentColor: '#ea580c',
+            secondaryColor: '#44403c', fontStyle: 'sans', animationIntensity: 'normal',
+        };
+        const p = plan({ theme: { light: incoming, dark: incoming } }, { theme: { light: saved, dark: saved } }, unpinned);
+        expect(p.changes).toEqual([]);
+        expect(p.unchanged.map(c => c.key)).toEqual(['themeLight', 'themeDark']);
+    });
+
+    it('still reports a theme side whose colours differ', () => {
+        const base = { backgroundColor: '#000', primaryColor: '#fff', accentColor: '#ea580c', secondaryColor: '#888', fontStyle: 'sans', animationIntensity: 'normal' };
+        const p = plan(
+            { theme: { light: base, dark: { ...base, accentColor: '#0df1fe' } } },
+            { theme: { light: { ...base, provider: 'Custom' }, dark: { ...base, provider: 'Custom' } } },
+            unpinned,
+        );
+        expect(keys(p)).toEqual(['themeDark']);
+    });
+
+    // "Not listed" must never be ambiguous between "absent from the config" and "already equal".
+    it('reports matching fields as unchanged rather than dropping them', () => {
+        const p = plan(
+            { visualizerMode: 'monet', backgroundOpacity: 0.5 },
+            { visualizerMode: 'monet', backgroundOpacity: 0.75 },
+            unpinned,
+        );
+        expect(keys(p)).toEqual(['backgroundOpacity']);
+        expect(p.unchanged.map(c => c.key)).toEqual(['visualizerMode']);
+        expect(p.unchanged[0]).toMatchObject({ from: 'monet', to: 'monet' });
+    });
+
+    it('does not flag an unavailable font on a row that is not changing', () => {
+        const p = buildImportPlan({
+            incoming: { lyricsCustomFontFamily: 'Same Font' },
+            current: {},
+            switches: unpinned,
+            customFontLabel: 'Same Font',
+            incomingFontAvailable: false,
+        });
+        expect(p.changes).toEqual([]);
+        expect(p.unchanged[0]?.note).toBeUndefined();
     });
 });

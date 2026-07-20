@@ -33,9 +33,17 @@ export interface ImportChange {
 
 export interface ImportPlan {
     changes: ImportChange[];
+    // Fields the config carries that already match — shown so "not listed" never has to mean two
+    // different things, but not selectable: applying them would be a no-op either way.
+    unchanged: ImportChange[];
     // Groups with at least one change, in display order.
     groups: ImportGroup[];
 }
+
+// The theme is offered per side. Wanting someone's night colours while keeping your own day ones is
+// the common case, and a single theme row cannot express it.
+export const THEME_LIGHT_KEY = 'themeLight';
+export const THEME_DARK_KEY = 'themeDark';
 
 // Every config field the import path actually applies, mapped to the group it is presented under.
 // Fields the codec round-trips but the import path does not apply are deliberately absent, so the
@@ -106,6 +114,34 @@ const isSameValue = (a: unknown, b: unknown): boolean => {
     }
 };
 
+// A theme side is compared on what it renders as. name/provider/description are labels, and an empty
+// list is the same as an absent one — comparing those too would report a change the user cannot see.
+const THEME_SIDE_FIELDS = [
+    'backgroundColor',
+    'primaryColor',
+    'accentColor',
+    'secondaryColor',
+    'fontStyle',
+    'fontFamily',
+    'animationIntensity',
+    'wordColors',
+    'lyricsIcons',
+] as const;
+
+const isEmptyish = (value: unknown) =>
+    value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+
+const isSameThemeSide = (a: unknown, b: unknown): boolean => {
+    if (a === b) return true;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    return THEME_SIDE_FIELDS.every((field) => {
+        const left = (a as Record<string, unknown>)[field];
+        const right = (b as Record<string, unknown>)[field];
+        if (isEmptyish(left) && isEmptyish(right)) return true;
+        return isSameValue(left, right);
+    });
+};
+
 export interface ImportPlanInput {
     // decompressConfig output.
     incoming: Record<string, unknown>;
@@ -133,10 +169,18 @@ export function buildImportPlan({
     incomingFontAvailable,
 }: ImportPlanInput): ImportPlan {
     const changes: ImportChange[] = [];
+    const unchanged: ImportChange[] = [];
+    const record = (change: ImportChange, same: boolean) => (same ? unchanged : changes).push(change);
 
-    // The theme is applied whole (save + apply), so it is one change rather than a per-colour diff.
     if (incoming.theme) {
-        changes.push({ group: 'theme', key: 'theme', from: current.theme ?? null, to: incoming.theme });
+        const incomingTheme = incoming.theme as { light?: unknown; dark?: unknown; };
+        const currentTheme = (current.theme ?? null) as { light?: unknown; dark?: unknown; } | null;
+        for (const [key, side] of [[THEME_LIGHT_KEY, 'light'], [THEME_DARK_KEY, 'dark']] as const) {
+            const from = currentTheme?.[side] ?? null;
+            const to = incomingTheme[side];
+            if (to === undefined) continue;
+            record({ group: 'theme', key, from, to }, isSameThemeSide(from, to));
+        }
     }
 
     // The import applies the per-renderer tunings only when the bundle is absent, so listing them
@@ -151,15 +195,14 @@ export function buildImportPlan({
         // at all — reporting "none -> X" there would contradict the screen.
         if (key === 'lyricsCustomFontFamily') {
             const from = customFontLabel ?? (current[key] as string | null | undefined) ?? null;
-            if (isSameValue(incoming[key], from)) continue;
             const change: ImportChange = { group, key, from, to: incoming[key] };
-            if (incomingFontAvailable === false) change.note = 'fontUnavailable';
-            changes.push(change);
+            const same = isSameValue(incoming[key], from);
+            if (!same && incomingFontAvailable === false) change.note = 'fontUnavailable';
+            record(change, same);
             continue;
         }
 
-        if (isSameValue(incoming[key], current[key])) continue;
-        changes.push({ group, key, from: current[key], to: incoming[key] });
+        record({ group, key, from: current[key], to: incoming[key] }, isSameValue(incoming[key], current[key]));
     }
 
     // Derived: taking a system font family evicts an uploaded one, and the stored file is deleted
@@ -194,5 +237,5 @@ export function buildImportPlan({
     }
 
     const present = new Set(changes.map(c => c.group));
-    return { changes, groups: IMPORT_GROUPS.filter(g => present.has(g)) };
+    return { changes, unchanged, groups: IMPORT_GROUPS.filter(g => present.has(g)) };
 }
