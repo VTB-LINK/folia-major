@@ -29,6 +29,9 @@ export interface ImportChange {
     // Informational, does not block the row: the incoming font is not installed here, so it will be
     // accepted but render through the fallback stack.
     note?: 'fontUnavailable';
+    // Leaf-level differences inside a nested settings object. A tuning bundle changes as a whole,
+    // but saying so is useless when one slider moved — these let the row be opened and read.
+    children?: ImportChange[];
 }
 
 export interface ImportPlan {
@@ -142,6 +145,31 @@ const isSameThemeSide = (a: unknown, b: unknown): boolean => {
     });
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+// Every leaf that differs between two settings objects, keyed by its dotted path. Recursing keeps
+// nested groups (a renderer's geometryVisibility, say) readable instead of collapsing to "changed".
+const diffLeaves = (from: unknown, to: unknown, group: ImportGroup, prefix = ''): ImportChange[] => {
+    if (!isPlainObject(to)) return [];
+    const base = isPlainObject(from) ? from : {};
+    const leaves: ImportChange[] = [];
+
+    for (const key of Object.keys(to)) {
+        const path = prefix ? `${prefix}.${key}` : key;
+        const left = base[key];
+        const right = to[key];
+        if (isSameValue(left, right)) continue;
+        if (isPlainObject(right)) {
+            leaves.push(...diffLeaves(left, right, group, path));
+            continue;
+        }
+        leaves.push({ group, key: path, from: left, to: right });
+    }
+
+    return leaves;
+};
+
 export interface ImportPlanInput {
     // decompressConfig output.
     incoming: Record<string, unknown>;
@@ -202,7 +230,14 @@ export function buildImportPlan({
             continue;
         }
 
-        record({ group, key, from: current[key], to: incoming[key] }, isSameValue(incoming[key], current[key]));
+        const same = isSameValue(incoming[key], current[key]);
+        const change: ImportChange = { group, key, from: current[key], to: incoming[key] };
+        // Nested settings objects carry their own leaf diff so the row can be opened and read.
+        if (!same && isPlainObject(incoming[key])) {
+            const children = diffLeaves(current[key], incoming[key], group);
+            if (children.length) change.children = children;
+        }
+        record(change, same);
     }
 
     // Derived: taking a system font family evicts an uploaded one, and the stored file is deleted

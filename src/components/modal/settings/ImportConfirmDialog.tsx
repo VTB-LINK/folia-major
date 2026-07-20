@@ -155,7 +155,9 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
         return key ? t(key) : change.key;
     };
 
-    const renderValue = (value: unknown, dimmed: boolean, key?: string) => {
+    // `bare` is the unchanged section: both sides are equal, so a nested object has nothing to say
+    // that the label has not already said.
+    const renderValue = (value: unknown, dimmed: boolean, key?: string, bare = false) => {
         const cls = `text-xs ${dimmed ? `${mutedColor} line-through` : ''}`;
 
         // Theme sides are usually named after the preset they were seeded from, so the names would
@@ -198,21 +200,58 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
         if (typeof value === 'boolean') return <span className={cls}>{t(value ? 'options.importValueOn' : 'options.importValueOff')}</span>;
         if (value === null || value === undefined || value === '') return <span className={`${cls} opacity-60`}>{t('options.importValueNone')}</span>;
         if (Array.isArray(value)) return <span className={cls}>{t('options.importValueCount', { count: value.length })}</span>;
-        if (typeof value === 'object') return <span className={cls}>{t('options.importValueAdjusted')}</span>;
+        // In the unchanged section a bundle is equal on both sides; say so rather than leave a gap.
+        if (typeof value === 'object') return <span className={cls}>{t(bare ? 'options.importValueSame' : 'options.importValueGrouped')}</span>;
         return <span className={cls}>{String(value)}</span>;
     };
 
     const changeRow = (change: ImportChange) => {
         const on = selected.has(change.key);
+        // A nested bundle has no readable value of its own, so it reports how many of its own
+        // settings move and opens to show them one by one.
+        const children = change.children ?? [];
+        const opaque = children.length > 0;
+        const open = !collapsed.has(`child:${change.key}`);
+
         return (
-            <li key={change.key} className="flex items-center gap-2 text-xs">
-                <Box state={on ? 'on' : 'off'} onClick={() => toggleKey(change.key)} />
-                <span className={`min-w-0 flex-1 truncate ${mutedColor}`}>{fieldLabel(change)}</span>
-                {renderValue(change.from, false, change.key)}
-                {on
-                    ? <span className={`shrink-0 ${mutedColor}`}>→</span>
-                    : <Undo2 size={12} className={`shrink-0 ${mutedColor}`} aria-label={t('options.importSkipped')} />}
-                {renderValue(change.to, !on, change.key)}
+            <li key={change.key} className="text-xs">
+                <div className="flex items-center gap-2">
+                    <Box state={on ? 'on' : 'off'} onClick={() => toggleKey(change.key)} />
+                    <span className={`min-w-0 flex-1 truncate ${mutedColor}`}>{fieldLabel(change)}</span>
+                    {opaque ? (
+                        <button
+                            type="button"
+                            onClick={() => toggleCollapse(`child:${change.key}`)}
+                            className={`flex shrink-0 items-center gap-1 ${!on ? `${mutedColor} line-through` : ''}`}
+                        >
+                            {t('options.importChildCount', { count: children.length })}
+                            <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+                        </button>
+                    ) : (
+                        <>
+                            {renderValue(change.from, false, change.key)}
+                            {on
+                                ? <span className={`shrink-0 ${mutedColor}`}>→</span>
+                                : <Undo2 size={12} className={`shrink-0 ${mutedColor}`} aria-label={t('options.importSkipped')} />}
+                            {renderValue(change.to, !on, change.key)}
+                        </>
+                    )}
+                </div>
+
+                {opaque && open && (
+                    <ul className={`mt-1 space-y-1 border-l pl-3 ${isDaylight ? 'border-zinc-900/10' : 'border-white/10'}`}>
+                        {children.map(child => (
+                            <li key={child.key} className="flex items-center gap-2">
+                                {/* Internal setting names: no label exists, and inventing one per slider
+                                    would be worse than showing the name the code uses. */}
+                                <span className={`min-w-0 flex-1 truncate font-mono text-[11px] ${mutedColor}`}>{child.key}</span>
+                                {renderValue(child.from, false)}
+                                <span className={`shrink-0 ${mutedColor}`}>→</span>
+                                {renderValue(child.to, !on)}
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </li>
         );
     };
@@ -312,7 +351,7 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                             <Box state="locked" />
                             <span className="text-sm font-medium">{t('options.importUnchanged')}</span>
                             <span className={`ml-auto flex items-center gap-1 text-xs ${mutedColor}`}>
-                                {t('options.importChangeCount', { count: plan.unchanged.length })}
+                                {t('options.importItemCount', { count: plan.unchanged.length })}
                                 <ChevronDown size={13} className={`transition-transform ${collapsed.has('__unchanged') ? '' : 'rotate-180'}`} />
                             </span>
                         </button>
@@ -327,7 +366,7 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                                                 <li key={change.key} className="flex items-center gap-2 text-xs">
                                                     <span className={`min-w-0 flex-1 truncate ${mutedColor}`}>{fieldLabel(change)}</span>
                                                     {/* Identical on both sides, so one value says it. */}
-                                                    {renderValue(change.from, false, change.key)}
+                                                    {renderValue(change.from, false, change.key, true)}
                                                 </li>
                                             ))}
                                         </ul>

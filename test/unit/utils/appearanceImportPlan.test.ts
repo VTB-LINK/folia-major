@@ -227,6 +227,31 @@ describe('buildImportPlan', () => {
         expect(keys(p)).toEqual(['themeDark']);
     });
 
+    // A tuning bundle that moved one slider must not read the same as one replaced wholesale.
+    it('breaks a changed settings object down to the leaves that moved', () => {
+        const p = plan(
+            { monetBackgroundTuning: { backgroundBlurPx: 24, backgroundSaturation: 0, backgroundWash: 0.34 } },
+            { monetBackgroundTuning: { backgroundBlurPx: 6, backgroundSaturation: 1.05, backgroundWash: 0.34 } },
+            unpinned,
+        );
+        const change = p.changes.find(c => c.key === 'monetBackgroundTuning');
+        expect(change?.children).toEqual([
+            { group: 'background', key: 'backgroundBlurPx', from: 6, to: 24 },
+            { group: 'background', key: 'backgroundSaturation', from: 1.05, to: 0 },
+        ]);
+    });
+
+    it('reaches leaves nested inside a settings object', () => {
+        const p = plan(
+            { dioramaTuning: { cameraSpeed: 1, geometryVisibility: { mode: 'clouds', rings: false } } },
+            { dioramaTuning: { cameraSpeed: 1, geometryVisibility: { mode: 'clouds', rings: true } } },
+            unpinned,
+        );
+        expect(p.changes[0]?.children).toEqual([
+            { group: 'visualizer', key: 'geometryVisibility.rings', from: true, to: false },
+        ]);
+    });
+
     // "Not listed" must never be ambiguous between "absent from the config" and "already equal".
     it('reports matching fields as unchanged rather than dropping them', () => {
         const p = plan(
