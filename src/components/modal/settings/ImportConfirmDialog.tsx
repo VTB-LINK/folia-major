@@ -104,11 +104,12 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
         [plan],
     );
 
-    // Everything starts accepted; the unchanged section starts closed since it is reference only.
+    // Everything starts accepted; the unchanged section starts closed since it is reference only --
+    // unless there is nothing else, in which case closing it would leave an empty dialog.
     useEffect(() => {
         if (!isOpen || !plan) return;
         setSelected(new Set(selectableKeys));
-        setCollapsed(new Set(['__unchanged']));
+        setCollapsed(plan.changes.length === 0 ? new Set() : new Set(['__unchanged']));
     }, [isOpen, plan, selectableKeys]);
 
     if (!plan) return null;
@@ -295,6 +296,13 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
             )}
         >
             <div className="max-h-[400px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                {plan.changes.length === 0 && (
+                    <div className={`flex items-start gap-2 rounded-2xl border px-4 py-3 text-xs ${rowClass} ${mutedColor}`}>
+                        <Info size={13} className="mt-0.5 shrink-0" />
+                        <span>{t('options.importNothingToChange')}</span>
+                    </div>
+                )}
+
                 {plan.groups.map((group) => {
                     const changes = plan.changes.filter(c => c.group === group);
                     const derived = changes.filter(c => c.derived);

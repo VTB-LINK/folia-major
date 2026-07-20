@@ -921,7 +921,7 @@ export default {
     "importSuccess": "Konfigurasi berhasil diimpor!",
     "importFailed": "Impor gagal, periksa formatnya.",
     "importConfirmTitle": "Konfirmasi impor",
-    "importConfirmDesc": "Konfigurasi yang diimpor akan menggantikan pengaturan di bawah. Item yang tidak dicentang tetap seperti sekarang.",
+    "importConfirmDesc": "Konfigurasi yang diimpor akan menggantikan pengaturan di bawah.\nItem yang tidak dicentang tetap seperti sekarang.",
     "importApplySelected": "Impor yang dipilih",
     "importChangeCount": "{{count}} perubahan",
     "importNothingToChange": "Konfigurasi yang diimpor sama dengan pengaturan saat ini — tidak ada yang berubah.",

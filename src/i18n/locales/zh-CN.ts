@@ -1019,7 +1019,7 @@ export default {
     "importSuccess": "配置导入成功！",
     "importFailed": "配置导入失败，请检查格式是否正确。",
     "importConfirmTitle": "确认导入",
-    "importConfirmDesc": "以下设置会被导入的配置覆盖。取消勾选的项保持现状。",
+    "importConfirmDesc": "以下设置会被导入的配置覆盖。\n取消勾选的项保持现状。",
     "importApplySelected": "导入所选",
     "importChangeCount": "{{count}} 项变更",
     "importNothingToChange": "导入的配置与当前设置一致，没有需要变更的项。",

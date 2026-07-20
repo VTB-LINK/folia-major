@@ -1015,7 +1015,7 @@ export default {
     "importSuccess": "Configuration imported successfully!",
     "importFailed": "Import failed, please check the format.",
     "importConfirmTitle": "Confirm import",
-    "importConfirmDesc": "The imported config will replace the settings below. Unchecked items stay as they are.",
+    "importConfirmDesc": "The imported config will replace the settings below.\nUnchecked items stay as they are.",
     "importApplySelected": "Import selected",
     "importChangeCount": "{{count}} change(s)",
     "importNothingToChange": "The imported config matches your current settings — nothing to change.",

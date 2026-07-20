@@ -303,12 +303,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                     : undefined,
             });
 
-            if (plan.groups.length === 0) {
-                store.statusSetter?.({ type: 'info', text: t('options.importNothingToChange') });
-                setImportText('');
-                return;
-            }
-
+            // Shown even when nothing differs. Skipping straight to a toast reads as the dialog
+            // having failed to appear, and "your settings already match this" is worth seeing.
             setPendingImport({ config, plan });
         } catch (err) {
             console.error('Import settings failed:', err);
