@@ -664,7 +664,7 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                                 <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                     {t('options.aiProvider') || 'AI Provider'}
                                 </div>
-                                <div className="text-[10px] opacity-40 max-w-[360px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                                <div className="text-xs opacity-50 max-w-[360px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                                     {t('options.aiProviderDesc')}
                                 </div>
                             </div>
