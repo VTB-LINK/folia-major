@@ -14,6 +14,9 @@ import { ObsCopyUrlButton } from '../../shared/ObsCopyUrlButton';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { compressConfig, decompressConfig, readSavedCustomTheme } from '../../../utils/appearanceCodec';
+import { buildImportPlan, type ImportGroup, type ImportPlan } from '../../../utils/appearanceImportPlan';
+import { isFontFamilyAvailable } from '../../../utils/fontAvailability';
+import ImportConfirmDialog from './ImportConfirmDialog';
 import { extractCfgFromInput } from '../../../utils/obsUrl';
 import { buildCurrentObsUrl } from '../../../utils/currentObsUrl';
 import { resolveWebObsTarget, selectWebObsSource } from '../../../utils/webObsTarget';
@@ -95,6 +98,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     const webObsSource = useSettingsUiStore(selectWebObsSource);
     const [importText, setImportText] = useState('');
     const [copiedType, setCopiedType] = useState<'none' | 'shortcode' | 'json' | 'obsurl'>('none');
+    // Parsed config held back until the user confirms which groups to take.
+    const [pendingImport, setPendingImport] = useState<{ config: any; plan: ImportPlan; } | null>(null);
 
     // Web AI 主题：Electron 在"桌面设置"配 key；web 无桌面设置，故在此提供（用户自带 key，经 SWA 无密钥中继）。
     const [webAi, setWebAiState] = useState<WebAiConfig>(() => getWebAiConfig());
@@ -279,66 +284,110 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         }
     };
 
+    // Parse and diff only. Applying waits for the confirmation, because a config can change settings
+    // it never mentions -- unpinning a custom theme, discarding an uploaded font.
     const handleImportConfig = () => {
         if (!importText.trim()) return;
         try {
             // Import accepts a bare shortcode/JSON or a full OBS URL (extracting its cfg param), so a look can be re-tuned from someone's link.
             const config = decompressConfig(extractCfgFromInput(importText));
+            const customFont = useSettingsUiStore.getState().lyricsCustomFont;
+            const plan = buildImportPlan({
+                incoming: config,
+                current: { ...buildVisualSettingsConfig(), theme: customTheme ?? null },
+                switches: { isCustomThemePreferred, songThemeAutoSwitchEnabled, songThemeAutoGenerateEnabled },
+                customFontSource: customFont?.source ?? null,
+                customFontLabel: customFont?.label ?? customFont?.family ?? null,
+                incomingFontAvailable: config.lyricsCustomFontFamily
+                    ? isFontFamilyAvailable(String(config.lyricsCustomFontFamily))
+                    : undefined,
+            });
 
+            if (plan.groups.length === 0) {
+                store.statusSetter?.({ type: 'info', text: t('options.importNothingToChange') });
+                setImportText('');
+                return;
+            }
+
+            setPendingImport({ config, plan });
+        } catch (err) {
+            console.error('Import settings failed:', err);
+            store.statusSetter?.({ type: 'error', text: t('options.importFailed') });
+        }
+    };
+
+    const applyImportedConfig = (config: any, groups: ImportGroup[]) => {
+        const has = (group: ImportGroup) => groups.includes(group);
+        try {
             // 1. Restore Theme
-            if (config.theme) {
+            if (has('theme') && config.theme) {
                 onSaveCustomTheme(config.theme);
                 onApplyCustomTheme();
             }
 
             // 2. Restore Visualizer Setup
-            if (config.visualizerMode) {
-                store.handleSetVisualizerMode(config.visualizerMode);
+            if (has('visualizer')) {
+                if (config.visualizerMode) {
+                    store.handleSetVisualizerMode(config.visualizerMode);
+                }
+                if (config.randomVisualizerModePerSong !== undefined) {
+                    store.handleToggleRandomVisualizerModePerSong(Boolean(config.randomVisualizerModePerSong));
+                }
+                if (config.visualizerOpacity !== undefined) {
+                    store.handleSetVisualizerOpacity(config.visualizerOpacity);
+                }
+                if (config.hidePlayerTranslationSubtitle !== undefined) {
+                    store.handleToggleHidePlayerTranslationSubtitle(Boolean(config.hidePlayerTranslationSubtitle));
+                }
+                if (config.showSubtitleTranslation !== undefined) {
+                    store.handleToggleShowSubtitleTranslation(Boolean(config.showSubtitleTranslation));
+                }
+                if (config.subtitleOverlayBackground !== undefined) {
+                    store.handleToggleSubtitleOverlayBackground(Boolean(config.subtitleOverlayBackground));
+                }
             }
-            if (config.randomVisualizerModePerSong !== undefined) {
-                store.handleToggleRandomVisualizerModePerSong(Boolean(config.randomVisualizerModePerSong));
+
+            if (has('background')) {
+                if (config.visualizerBackgroundMode) {
+                    store.handleSetVisualizerBackgroundMode(config.visualizerBackgroundMode);
+                }
+                if (config.backgroundOpacity !== undefined) {
+                    store.handleSetBackgroundOpacity(config.backgroundOpacity);
+                }
             }
-            if (config.visualizerBackgroundMode) {
-                store.handleSetVisualizerBackgroundMode(config.visualizerBackgroundMode);
-            }
-            if (config.backgroundOpacity !== undefined) {
-                store.handleSetBackgroundOpacity(config.backgroundOpacity);
-            }
-            if (config.visualizerOpacity !== undefined) {
-                store.handleSetVisualizerOpacity(config.visualizerOpacity);
-            }
-            if (config.hidePlayerTranslationSubtitle !== undefined) {
-                store.handleToggleHidePlayerTranslationSubtitle(Boolean(config.hidePlayerTranslationSubtitle));
-            }
-            if (config.showSubtitleTranslation !== undefined) {
-                store.handleToggleShowSubtitleTranslation(Boolean(config.showSubtitleTranslation));
-            }
-            if (config.subtitleOverlayBackground !== undefined) {
-                store.handleToggleSubtitleOverlayBackground(Boolean(config.subtitleOverlayBackground));
-            }
-            if (config.lyricsFontStyle) {
-                store.handleSetLyricsFontStyle(config.lyricsFontStyle);
-            }
-            if (config.lyricsFontScale !== undefined) {
-                store.handleSetLyricsFontScale(config.lyricsFontScale);
-            }
-            if (config.lyricsFontFallbackFamilies) {
-                store.handleSetLyricsFontFallbackFamilies(config.lyricsFontFallbackFamilies);
-            }
-            if (config.subtitleFontInheritsLyrics !== undefined) {
-                store.handleSetSubtitleFontInheritsLyrics(Boolean(config.subtitleFontInheritsLyrics));
-            }
-            if (config.subtitleFontStyle) {
-                store.handleSetSubtitleFontStyle(config.subtitleFontStyle);
-            }
-            if (config.subtitleFontFamily !== undefined) {
-                store.handleSetSubtitleFontFamily(config.subtitleFontFamily);
-            }
-            if (config.subtitleFontFallbackFamilies) {
-                store.handleSetSubtitleFontFallbackFamilies(config.subtitleFontFallbackFamilies);
+
+            if (has('fonts')) {
+                if (config.lyricsFontStyle) {
+                    store.handleSetLyricsFontStyle(config.lyricsFontStyle);
+                }
+                if (config.lyricsFontScale !== undefined) {
+                    store.handleSetLyricsFontScale(config.lyricsFontScale);
+                }
+                if (config.lyricsFontFallbackFamilies) {
+                    store.handleSetLyricsFontFallbackFamilies(config.lyricsFontFallbackFamilies);
+                }
+                // Only a system family is portable. Setting one evicts an uploaded font and deletes
+                // its stored file, which is why the confirmation calls that out separately.
+                if (config.lyricsCustomFontFamily) {
+                    const family = String(config.lyricsCustomFontFamily);
+                    useSettingsUiStore.getState().handleSetLyricsCustomFont({ source: 'system', family, label: family });
+                }
+                if (config.subtitleFontInheritsLyrics !== undefined) {
+                    store.handleSetSubtitleFontInheritsLyrics(Boolean(config.subtitleFontInheritsLyrics));
+                }
+                if (config.subtitleFontStyle) {
+                    store.handleSetSubtitleFontStyle(config.subtitleFontStyle);
+                }
+                if (config.subtitleFontFamily !== undefined) {
+                    store.handleSetSubtitleFontFamily(config.subtitleFontFamily);
+                }
+                if (config.subtitleFontFallbackFamilies) {
+                    store.handleSetSubtitleFontFallbackFamilies(config.subtitleFontFallbackFamilies);
+                }
             }
 
             // Tunings
+            if (has('visualizer')) {
             if (config.visualizerTunings) {
                 applyVisualizerTuningsToSettings(store as unknown as Record<string, unknown>, config.visualizerTunings);
             }
@@ -366,60 +415,70 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
             if (!config.visualizerTunings && config.dioramaTuning) {
                 store.handleSetDioramaTuning(config.dioramaTuning);
             }
-            if (config.monetBackgroundTuning) {
-                store.handleSetMonetBackgroundTuning(config.monetBackgroundTuning);
-            }
-            if (config.nomandBackgroundTuning) {
-                store.handleSetNomandBackgroundTuning(config.nomandBackgroundTuning);
-            }
-            if (config.latentBackgroundTuning) {
-                store.handleSetLatentBackgroundTuning(config.latentBackgroundTuning);
-            }
             if (!config.visualizerTunings && config.monetTuning) {
                 store.handleSetMonetTuning(config.monetTuning);
             }
-            let mergedUrlList: UrlBackgroundItem[] | undefined;
+            }
 
-            if (config.urlBackgroundList && Array.isArray(config.urlBackgroundList)) {
-                // Batch merge: compute the final list once, then apply with a single
-                // store update to avoid sequential localStorage writes per item.
-                const existingMap = new Map(store.urlBackgroundList.map(i => [i.id, { ...i }]));
-                for (const item of config.urlBackgroundList) {
-                    const sanitized = sanitizeUrlBackgroundItem(item);
-                    if (!sanitized) {
-                        continue;
+            if (has('background')) {
+                if (config.monetBackgroundTuning) {
+                    store.handleSetMonetBackgroundTuning(config.monetBackgroundTuning);
+                }
+                if (config.nomandBackgroundTuning) {
+                    store.handleSetNomandBackgroundTuning(config.nomandBackgroundTuning);
+                }
+                if (config.latentBackgroundTuning) {
+                    store.handleSetLatentBackgroundTuning(config.latentBackgroundTuning);
+                }
+
+                let mergedUrlList: UrlBackgroundItem[] | undefined;
+
+                if (config.urlBackgroundList && Array.isArray(config.urlBackgroundList)) {
+                    // Batch merge: compute the final list once, then apply with a single
+                    // store update to avoid sequential localStorage writes per item.
+                    const existingMap = new Map(store.urlBackgroundList.map(i => [i.id, { ...i }]));
+                    for (const item of config.urlBackgroundList) {
+                        const sanitized = sanitizeUrlBackgroundItem(item);
+                        if (!sanitized) {
+                            continue;
+                        }
+
+                        const existing = existingMap.get(sanitized.id);
+                        existingMap.set(sanitized.id, {
+                            ...(existing ?? { id: sanitized.id }),
+                            url: sanitized.url,
+                            note: sanitized.note,
+                        });
                     }
+                    mergedUrlList = Array.from(existingMap.values());
+                    store.handleSetUrlBackgroundList(mergedUrlList);
+                }
+                // Validate that the imported selectedId still exists in the final list
+                // to avoid a dangling reference that renders UrlBackgroundLayer blank.
+                if (config.urlBackgroundSelectedId) {
+                    const list = mergedUrlList ?? store.urlBackgroundList;
+                    if (list.some(i => i.id === config.urlBackgroundSelectedId)) {
+                        store.handleSetUrlBackgroundSelectedId(config.urlBackgroundSelectedId);
+                    }
+                }
+            }
 
-                    const existing = existingMap.get(sanitized.id);
-                    existingMap.set(sanitized.id, {
-                        ...(existing ?? { id: sanitized.id }),
-                        url: sanitized.url,
-                        note: sanitized.note,
-                    });
+            if (has('songTheme')) {
+                if (config.songThemeAutoSwitchEnabled !== undefined) {
+                    onToggleSongThemeAutoSwitch(Boolean(config.songThemeAutoSwitchEnabled));
                 }
-                mergedUrlList = Array.from(existingMap.values());
-                store.handleSetUrlBackgroundList(mergedUrlList);
-            }
-            // Validate that the imported selectedId still exists in the final list
-            // to avoid a dangling reference that renders UrlBackgroundLayer blank.
-            if (config.urlBackgroundSelectedId) {
-                const list = mergedUrlList ?? store.urlBackgroundList;
-                if (list.some(i => i.id === config.urlBackgroundSelectedId)) {
-                    store.handleSetUrlBackgroundSelectedId(config.urlBackgroundSelectedId);
+                if (config.songThemeAutoGenerateEnabled !== undefined) {
+                    onToggleSongThemeAutoGenerate(Boolean(config.songThemeAutoGenerateEnabled));
                 }
-            }
-            if (config.songThemeAutoSwitchEnabled !== undefined) {
-                onToggleSongThemeAutoSwitch(Boolean(config.songThemeAutoSwitchEnabled));
-            }
-            if (config.songThemeAutoGenerateEnabled !== undefined) {
-                onToggleSongThemeAutoGenerate(Boolean(config.songThemeAutoGenerateEnabled));
             }
 
             store.statusSetter?.({ type: 'success', text: t('options.importSuccess') });
             setImportText('');
+            setPendingImport(null);
         } catch (err) {
             console.error('Import settings failed:', err);
             store.statusSetter?.({ type: 'error', text: t('options.importFailed') });
+            setPendingImport(null);
         }
     };
 
@@ -854,6 +913,16 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                     </div>
                 </div>
             </section>
+
+            <ImportConfirmDialog
+                isOpen={pendingImport !== null}
+                plan={pendingImport?.plan ?? null}
+                isDaylight={isDaylight}
+                onCancel={() => setPendingImport(null)}
+                onConfirm={(groups) => {
+                    if (pendingImport) applyImportedConfig(pendingImport.config, groups);
+                }}
+            />
         </div>
     );
 };
