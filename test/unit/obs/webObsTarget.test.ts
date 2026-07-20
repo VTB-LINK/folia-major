@@ -4,7 +4,8 @@ import { useSettingsUiStore } from '@/stores/useSettingsUiStore';
 
 // test/unit/obs/webObsTarget.test.ts
 // Web stage source derivation for the copy-OBS-URL buttons: PlayerCap takes precedence over
-// Now Playing, and PlayerCap URLs carry only its non-default connection params.
+// Now Playing, and PlayerCap URLs carry only its non-default connection params. Every target
+// also carries the obsTheme mode marker, which the overlay reads to pick static vs dynamic.
 
 describe('selectWebObsSource', () => {
     it('prefers playercap, then now-playing, else null', () => {
@@ -24,6 +25,9 @@ describe('resolveWebObsTarget', () => {
             playerCapPlayer: '',
             playerCapTimeBasis: 'play_time',
             playerCapSticky: true,
+            // Pin the theme mode: the store is a singleton across cases, so leaving it unset would
+            // leak a previous case's mode and make this file order-dependent.
+            webObsThemeMode: 'builtin',
         });
     });
 
@@ -33,12 +37,12 @@ describe('resolveWebObsTarget', () => {
 
     it('returns a bare now-playing target', () => {
         useSettingsUiStore.setState({ enableNowPlayingStage: true });
-        expect(resolveWebObsTarget()).toEqual({ source: 'now-playing', host: '', extra: {} });
+        expect(resolveWebObsTarget()).toEqual({ source: 'now-playing', host: '', extra: { obsTheme: 'builtin' } });
     });
 
     it('omits playercap params equal to the OBS defaults', () => {
         useSettingsUiStore.setState({ enablePlayerCapStage: true });
-        expect(resolveWebObsTarget()).toEqual({ source: 'playercap', host: '', extra: {} });
+        expect(resolveWebObsTarget()).toEqual({ source: 'playercap', host: '', extra: { obsTheme: 'builtin' } });
     });
 
     it('carries non-default playercap host/nxpcPlayer/nxpcBasis/nxpcSticky', () => {
@@ -52,7 +56,7 @@ describe('resolveWebObsTarget', () => {
         expect(resolveWebObsTarget()).toEqual({
             source: 'playercap',
             host: '192.168.1.9:8765',
-            extra: { nxpcPlayer: 'foobar2000', nxpcBasis: 'timestamp', nxpcSticky: '0' },
+            extra: { obsTheme: 'builtin', nxpcPlayer: 'foobar2000', nxpcBasis: 'timestamp', nxpcSticky: '0' },
         });
     });
 });
