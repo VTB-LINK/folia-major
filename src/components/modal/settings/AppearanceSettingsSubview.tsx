@@ -209,6 +209,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         return {
             theme: exportTheme,
             ...buildVisualSettingsConfig(),
+            // buildVisualSettingsConfig reads these from persisted preferences; the live controller
+            // props are one tick fresher, so they deliberately override the spread here.
             songThemeAutoSwitchEnabled,
             songThemeAutoGenerateEnabled,
         };
