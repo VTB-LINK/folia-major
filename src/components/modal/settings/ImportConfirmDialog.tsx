@@ -5,6 +5,7 @@ import ThemedDialog from '../../shared/ThemedDialog';
 import { getVisualizerModeLabel, hasVisualizerMode } from '../../visualizer/registry';
 import { getVisualizerBackgroundModeLabel, hasVisualizerBackgroundMode } from '../../visualizer/backgrounds/registry';
 import { THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportChange, type ImportGroup, type ImportPlan } from '../../../utils/appearanceImportPlan';
+import { resolveSettingLabelKey } from '../../../utils/settingLabelLookup';
 
 // src/components/modal/settings/ImportConfirmDialog.tsx
 // What an imported config would change, before it is applied, chosen field by field. Rows spell out
@@ -66,31 +67,6 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
     latentBackgroundTuning: 'options.importFieldLatentBackgroundTuning',
 };
 
-// Leaf settings inside a tuning object, keyed by `<field>.<path>` so a name that repeats across
-// renderers cannot pick up the wrong label. These already exist in the settings panel — a slider the
-// user can see named "图片水平偏移" should not read as backgroundHalfPaneOffsetX here. Anything not
-// listed falls back to the name the code uses, which is still better than inventing one.
-const LEAF_LABEL_KEYS: Record<string, string> = {
-    'monetBackgroundTuning.backgroundSource': 'options.monetBackgroundSource',
-    'monetBackgroundTuning.backgroundLayout': 'options.monetBackgroundLayout',
-    'monetBackgroundTuning.backgroundHalfPaneOffsetX': 'options.monetHalfPaneOffsetX',
-    'monetBackgroundTuning.backgroundBlurPx': 'options.monetBackgroundBlur',
-    'monetBackgroundTuning.backgroundOverlayOpacity': 'options.monetBackgroundOverlayOpacity',
-    'monetBackgroundTuning.backgroundGrayscale': 'options.monetBackgroundGrayscale',
-    'monetBackgroundTuning.backgroundSaturation': 'options.monetBackgroundSaturation',
-    'monetBackgroundTuning.backgroundWash': 'options.monetBackgroundWash',
-    'monetBackgroundTuning.backgroundWashColorMode': 'options.monetBackgroundWashColorMode',
-    'monetBackgroundTuning.backgroundWashCustomColor': 'options.monetBackgroundWashCustomColor',
-    'latentBackgroundTuning.ditheringSize': 'options.latentDitheringSize',
-    'latentBackgroundTuning.ditheringOpacity': 'options.latentDitheringOpacity',
-    'latentBackgroundTuning.meshSwirl': 'options.latentMeshSwirl',
-    'monetTuning.keywordColoringEnabled': 'options.monetKeywordColoring',
-    'monetTuning.portraitSource': 'options.monetPortraitSource',
-    'monetTuning.portraitStyle': 'options.monetPortraitStyle',
-    'monetTuning.showPortraitDragHanger': 'options.monetPortraitDragHanger',
-    'monetTuning.audioStyle': 'options.monetAudioStyle',
-};
-
 // The per-renderer tunings borrow the renderer's own display name instead of inventing one.
 const TUNING_MODES: Record<string, string> = {
     classicTuning: 'classic',
@@ -119,7 +95,7 @@ const isThemeSide = (value: unknown): value is {
 const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
     isOpen, plan, isDaylight, onCancel, onConfirm,
 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -266,7 +242,8 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                 {opaque && open && (
                     <ul className={`mt-1 space-y-1 border-l pl-3 ${isDaylight ? 'border-zinc-900/10' : 'border-white/10'}`}>
                         {children.map((child) => {
-                            const labelKey = LEAF_LABEL_KEYS[`${change.key}.${child.key}`];
+                            // The panel's own label for this setting, if it has one.
+                            const labelKey = resolveSettingLabelKey(change.key, child.key, k => i18n.exists(k));
                             return (
                             <li key={child.key} className="flex items-center gap-2">
                                 <span className={`min-w-0 flex-1 truncate ${mutedColor} ${labelKey ? 'text-xs' : 'font-mono text-[11px]'}`}>
