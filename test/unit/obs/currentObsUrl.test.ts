@@ -1,0 +1,78 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// test/unit/obs/currentObsUrl.test.ts
+// What the copy-OBS-URL builder bakes into cfg per theme mode. Headline invariant: "static" always
+// carries a theme, falling back to the built-in preset — a theme-less cfg is exactly what the
+// overlay reads as "resolve per song", so a static link without one would silently animate.
+
+vi.mock('@/utils/appearanceCodec', () => ({
+    compressConfig: vi.fn(() => 'folia-theme://x'),
+    readSavedCustomTheme: vi.fn(),
+}));
+vi.mock('@/services/themePreferences', () => ({ readStoredLastAppliedThemePointer: vi.fn() }));
+vi.mock('@/services/themeCache', () => ({ getLastDualTheme: vi.fn() }));
+vi.mock('@/utils/visualSettingsConfig', () => ({ buildVisualSettingsConfig: () => ({ visualizerMode: 'monet' }) }));
+
+import { buildCurrentObsUrl } from '@/utils/currentObsUrl';
+import { compressConfig, readSavedCustomTheme } from '@/utils/appearanceCodec';
+import { readStoredLastAppliedThemePointer } from '@/services/themePreferences';
+import { getLastDualTheme } from '@/services/themeCache';
+import { useSettingsUiStore } from '@/stores/useSettingsUiStore';
+
+const compressMock = vi.mocked(compressConfig);
+const pointerMock = vi.mocked(readStoredLastAppliedThemePointer);
+const customMock = vi.mocked(readSavedCustomTheme);
+const aiMock = vi.mocked(getLastDualTheme);
+
+const CUSTOM = { light: { name: 'custom-l' }, dark: { name: 'custom-d' } } as never;
+
+// The config handed to compressConfig is the cfg payload, so its theme is what the link burns in.
+const bakedTheme = () => (compressMock.mock.calls.at(-1)?.[0] as any).theme;
+
+describe('buildCurrentObsUrl', () => {
+    beforeEach(() => {
+        compressMock.mockClear();
+        pointerMock.mockReset().mockReturnValue('default');
+        customMock.mockReset().mockReturnValue(undefined);
+        aiMock.mockReset().mockResolvedValue(null);
+        useSettingsUiStore.setState({
+            isDaylight: false,
+            transparentPlayerBackground: false,
+            webObsThemeMode: 'static',
+        });
+    });
+
+    it('bakes the applied custom theme in static mode', async () => {
+        pointerMock.mockReturnValue('custom');
+        customMock.mockReturnValue(CUSTOM);
+        await buildCurrentObsUrl('playercap');
+        expect(bakedTheme()).toBe(CUSTOM);
+    });
+
+    // Names, not identity: if the base preset ever moves or is renamed, this fails loudly.
+    it('falls back to the built-in preset when static has no applied theme', async () => {
+        await buildCurrentObsUrl('playercap');
+        expect(bakedTheme().dark.name).toBe('Midnight Default');
+        expect(bakedTheme().light.name).toBe('Daylight Default');
+    });
+
+    it('bakes no theme in the dynamic modes, even with one applied', async () => {
+        pointerMock.mockReturnValue('custom');
+        customMock.mockReturnValue(CUSTOM);
+        for (const mode of ['builtin', 'ai'] as const) {
+            useSettingsUiStore.setState({ webObsThemeMode: mode });
+            await buildCurrentObsUrl('playercap');
+            expect(bakedTheme()).toBeNull();
+        }
+    });
+
+    it('keeps cfg the terminal segment behind the technical params', async () => {
+        useSettingsUiStore.setState({ isDaylight: true, transparentPlayerBackground: true });
+        const url = await buildCurrentObsUrl('playercap', 'localhost:8765', { obsTheme: 'static' });
+        expect(url).toContain('obsSource=playercap');
+        expect(url).toContain('daylight=1');
+        expect(url).toContain('transparent=1');
+        expect(url).toContain('obsTheme=static');
+        expect(url.slice(url.indexOf('cfg=')).includes('&')).toBe(false);
+    });
+});

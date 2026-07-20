@@ -5,19 +5,23 @@ import { buildObsSourceUrl } from './obsUrl';
 import { useSettingsUiStore } from '../stores/useSettingsUiStore';
 import { readStoredLastAppliedThemePointer } from '../services/themePreferences';
 import { getLastDualTheme } from '../services/themeCache';
+import { BASE_DUAL_THEME } from '../services/baseThemes';
 
 // src/utils/currentObsUrl.ts
 // Build the OBS static URL for a given web source from the current visual settings, producing the
 // same cfg as the import/export "copy config".
 
-// The effective exported theme, matching the import/export "copy config" default: the active AI
-// theme when an AI theme is applied, otherwise the saved custom theme (same as the prior behavior
-// for the non-AI cases). The AI theme object lives only in IndexedDB (async); the last-applied
-// pointer (sync) is the authoritative "AI is active" signal — getLastDualTheme() alone can return a
-// theme left stale after a reset to default, so the AI read must be gated on the pointer.
+// The theme that is effectively applied right now: the cached AI theme while an AI theme is active,
+// the saved custom theme while a custom one is, and null on the built-in default preset (which has
+// no saved object of its own). The AI theme lives only in IndexedDB (async) while the last-applied
+// pointer is synchronous, so the pointer — not the cache — decides which source is active;
+// getLastDualTheme() alone can return a theme left stale after a reset to default.
+// Every branch may yield null; deciding what to do with that belongs to the caller.
 export async function readEffectiveExportTheme(): Promise<DualTheme | null> {
-  if (readStoredLastAppliedThemePointer() === 'ai') return (await getLastDualTheme()) ?? null;
-  return readSavedCustomTheme() ?? null;
+  const pointer = readStoredLastAppliedThemePointer();
+  if (pointer === 'ai') return (await getLastDualTheme()) ?? null;
+  if (pointer === 'custom') return readSavedCustomTheme() ?? null;
+  return null;
 }
 
 // host may carry a source's non-default endpoint (empty = page default); extra carries
@@ -30,8 +34,10 @@ export async function readEffectiveExportTheme(): Promise<DualTheme | null> {
 export async function buildCurrentObsUrl(obsSource: string, host = '', extra?: Record<string, string>): Promise<string> {
   const { isDaylight, transparentPlayerBackground, webObsThemeMode } = useSettingsUiStore.getState();
   // Dynamic modes ('builtin'/'ai') bake no theme, so the overlay resolves one per song (cover-derived
-  // builtin, plus a regenerated AI theme under 'ai'); 'static' burns the current effective theme as before.
-  const theme = webObsThemeMode === 'static' ? await readEffectiveExportTheme() : null;
+  // builtin, plus a regenerated AI theme under 'ai'). 'static' must always bake something: a
+  // theme-less cfg is exactly what the overlay treats as "go dynamic", so a user on the default
+  // preset would silently get per-song colors after asking for a frozen link.
+  const theme = webObsThemeMode === 'static' ? ((await readEffectiveExportTheme()) ?? BASE_DUAL_THEME) : null;
   const config = { theme, ...buildVisualSettingsConfig() };
   const mergedExtra: Record<string, string> = {};
   if (isDaylight) mergedExtra.daylight = '1';
