@@ -758,6 +758,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                         <div className="text-xs font-semibold opacity-60" style={{ color: 'var(--text-secondary)' }}>
                             {t('options.exportThemeLabel')}
                         </div>
+                        {/* The OBS copy button sits in the same card, so say outright that this does not reach it. */}
+                        <div className="text-xs opacity-50 max-w-[400px]" style={{ color: 'var(--text-secondary)' }}>
+                            {t('options.exportThemeObsHint')}
+                        </div>
                         <div className="flex flex-wrap gap-2 mt-1">
                             {aiTheme && (
                                 <button
