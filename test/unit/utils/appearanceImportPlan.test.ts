@@ -71,6 +71,51 @@ describe('buildImportPlan', () => {
         expect(keys(p)).toEqual(['classicTuning', 'dioramaTuning']);
     });
 
+    // buildVisualSettingsConfig reports null for an uploaded font, so without the label the row
+    // would claim the user has no font while the picker shows one.
+    it('names the font the picker shows as the from-value', () => {
+        const p = buildImportPlan({
+            incoming: { lyricsCustomFontFamily: 'Comic Sans MS' },
+            current: { lyricsCustomFontFamily: null },
+            switches: unpinned,
+            customFontSource: 'uploaded',
+            customFontLabel: 'DFGKaiSho-XB',
+        });
+        expect(p.changes.find(c => c.key === 'lyricsCustomFontFamily'))
+            .toMatchObject({ from: 'DFGKaiSho-XB', to: 'Comic Sans MS' });
+    });
+
+    it('reports no font change when the incoming family is the one already shown', () => {
+        const p = buildImportPlan({
+            incoming: { lyricsCustomFontFamily: 'DFGKaiSho-XB' },
+            current: { lyricsCustomFontFamily: null },
+            switches: unpinned,
+            customFontLabel: 'DFGKaiSho-XB',
+        });
+        expect(p.changes.some(c => c.key === 'lyricsCustomFontFamily')).toBe(false);
+    });
+
+    it('flags an incoming font this machine cannot render', () => {
+        const unavailable = buildImportPlan({
+            incoming: { lyricsCustomFontFamily: 'Comic Sans MS' },
+            current: {},
+            switches: unpinned,
+            incomingFontAvailable: false,
+        });
+        expect(unavailable.changes.find(c => c.key === 'lyricsCustomFontFamily')?.note).toBe('fontUnavailable');
+
+        // Available, and not measured at all, both stay quiet.
+        for (const incomingFontAvailable of [true, undefined]) {
+            const p = buildImportPlan({
+                incoming: { lyricsCustomFontFamily: 'Comic Sans MS' },
+                current: {},
+                switches: unpinned,
+                incomingFontAvailable,
+            });
+            expect(p.changes.find(c => c.key === 'lyricsCustomFontFamily')?.note).toBeUndefined();
+        }
+    });
+
     // Only a system family is portable, so the config can never carry the uploaded font it evicts.
     it('warns that accepting a font family discards an uploaded one', () => {
         const p = buildImportPlan({

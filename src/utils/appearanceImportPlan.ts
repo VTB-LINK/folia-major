@@ -26,6 +26,9 @@ export interface ImportChange {
     to: unknown;
     // True when the config never mentioned this field and the change follows from a resolver rule.
     derived?: boolean;
+    // Informational, does not block the row: the incoming font is not installed here, so it will be
+    // accepted but render through the fallback stack.
+    note?: 'fontUnavailable';
 }
 
 export interface ImportPlan {
@@ -114,9 +117,21 @@ export interface ImportPlanInput {
     // accepting a family replaces it and deletes the stored file. Pass the current source so that
     // loss can be shown rather than discovered afterwards.
     customFontSource?: 'system' | 'uploaded' | null;
+    // What the user sees named in the font picker. An uploaded font exports as null, so without this
+    // the row would claim the user currently has no font at all.
+    customFontLabel?: string | null;
+    // From isFontFamilyAvailable. Undefined means it was not measured, which stays quiet.
+    incomingFontAvailable?: boolean;
 }
 
-export function buildImportPlan({ incoming, current, switches, customFontSource }: ImportPlanInput): ImportPlan {
+export function buildImportPlan({
+    incoming,
+    current,
+    switches,
+    customFontSource,
+    customFontLabel,
+    incomingFontAvailable,
+}: ImportPlanInput): ImportPlan {
     const changes: ImportChange[] = [];
 
     // The theme is applied whole (save + apply), so it is one change rather than a per-colour diff.
@@ -131,6 +146,18 @@ export function buildImportPlan({ incoming, current, switches, customFontSource 
     for (const [key, group] of Object.entries(FIELD_GROUPS)) {
         if (incoming[key] === undefined) continue;
         if (bundled && BUNDLED_TUNING_FIELDS.has(key)) continue;
+
+        // The font row names what the picker shows, which for an uploaded font is not in `current`
+        // at all — reporting "none -> X" there would contradict the screen.
+        if (key === 'lyricsCustomFontFamily') {
+            const from = customFontLabel ?? (current[key] as string | null | undefined) ?? null;
+            if (isSameValue(incoming[key], from)) continue;
+            const change: ImportChange = { group, key, from, to: incoming[key] };
+            if (incomingFontAvailable === false) change.note = 'fontUnavailable';
+            changes.push(change);
+            continue;
+        }
+
         if (isSameValue(incoming[key], current[key])) continue;
         changes.push({ group, key, from: current[key], to: incoming[key] });
     }
