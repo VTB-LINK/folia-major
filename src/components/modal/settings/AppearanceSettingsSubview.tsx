@@ -109,15 +109,14 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         return 'none';
     });
 
+    // Repair only: a selection whose option no longer exists falls back, but a deliberate pick is
+    // never overwritten. Re-running the initializer here used to discard the user's choice on any
+    // theme change. bgMode is not a dependency -- the buttons are gated on the themes themselves.
     React.useEffect(() => {
-        if (bgMode === 'ai' && aiTheme) {
-            setExportThemeType('ai');
-        } else if (customTheme) {
-            setExportThemeType('custom');
-        } else {
-            setExportThemeType('none');
-        }
-    }, [aiTheme, customTheme, bgMode]);
+        setExportThemeType(prev => (
+            (prev === 'ai' && !aiTheme) || (prev === 'custom' && !customTheme) ? 'none' : prev
+        ));
+    }, [aiTheme, customTheme]);
 
     // Access ZUSTAND settings store directly for setters & configurations
     const store = useSettingsUiStore(useShallow(state => ({
