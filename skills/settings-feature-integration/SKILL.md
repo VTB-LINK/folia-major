@@ -20,12 +20,14 @@ description: Use when adding, changing, refactoring, or reviewing user-facing se
 
 视觉相关设置必须接入外观页的视觉配置导入导出：
 
-- 文件：`src/components/modal/settings/AppearanceSettingsSubview.tsx`
-- 导出入口：`buildCurrentConfig`
-- 短码压缩：`compressConfig`
-- 短码解压：`decompressConfig`
-- JSON 白名单：`validKeys`
-- 导入应用：`handleImportConfig`
+- 编解码文件：`src/utils/appearanceCodec.ts`
+  - 短码压缩：`compressConfig`
+  - 短码解压：`decompressConfig`
+  - JSON 白名单：`validKeys`
+- 外观页文件：`src/components/modal/settings/AppearanceSettingsSubview.tsx`
+  - 导出入口：`buildCurrentConfig`
+  - 导入应用：`handleImportConfig`
+- 需要随 OBS 链接带出时：`src/utils/visualSettingsConfig.ts`
 
 新增 visualizer tuning（包括当前的 `claddaghTuning`）时通常还要同步：
 
@@ -70,7 +72,7 @@ description: Use when adding, changing, refactoring, or reviewing user-facing se
 ## Review Checklist
 
 - 这个设置是视觉相关、功能性，还是两者都是？
-- 视觉设置是否进入 `buildCurrentConfig`、`compressConfig`、`decompressConfig`、`validKeys` 和 `handleImportConfig`？
+- 视觉设置是否进入 `appearanceCodec.ts` 的 `compressConfig`、`decompressConfig`、`validKeys`，以及外观页的 `buildCurrentConfig` 和 `handleImportConfig`？
 - 功能性设置或动作是否进入 `COMMAND_PALETTE_COMMANDS`？
 - 命令是否有中英文 i18n、中文关键词和拼音缩写？
 - store、localStorage key、默认值、resetter、导入恢复是否一致？

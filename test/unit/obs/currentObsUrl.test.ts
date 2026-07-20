@@ -9,7 +9,14 @@ vi.mock('@/utils/appearanceCodec', () => ({
     compressConfig: vi.fn(() => 'folia-theme://x'),
     readSavedCustomTheme: vi.fn(),
 }));
-vi.mock('@/services/themePreferences', () => ({ readStoredLastAppliedThemePointer: vi.fn() }));
+vi.mock('@/services/themePreferences', () => ({
+    readStoredLastAppliedThemePointer: vi.fn(),
+    // Stand in for the real helper so the base-preset fallback's intensity pass is observable.
+    applyStoredAnimationIntensityToDualTheme: vi.fn((dual: any) => ({
+        light: { ...dual.light, animationIntensity: 'calm' },
+        dark: { ...dual.dark, animationIntensity: 'calm' },
+    })),
+}));
 vi.mock('@/services/themeCache', () => ({ getLastDualTheme: vi.fn() }));
 vi.mock('@/utils/visualSettingsConfig', () => ({ buildVisualSettingsConfig: () => ({ visualizerMode: 'monet' }) }));
 
@@ -56,6 +63,14 @@ describe('buildCurrentObsUrl', () => {
         expect(bakedTheme().light.name).toBe('Daylight Default');
     });
 
+    // The constant hardcodes 'normal'; the saved custom and cached AI themes already carry the
+    // user's stored intensity, so the fallback has to pick it up too.
+    it('applies the stored animation intensity to the base preset fallback', async () => {
+        await buildCurrentObsUrl('playercap');
+        expect(bakedTheme().dark.animationIntensity).toBe('calm');
+        expect(bakedTheme().light.animationIntensity).toBe('calm');
+    });
+
     it('bakes no theme in the dynamic modes, even with one applied', async () => {
         pointerMock.mockReturnValue('custom');
         customMock.mockReturnValue(CUSTOM);
@@ -74,5 +89,13 @@ describe('buildCurrentObsUrl', () => {
         expect(url).toContain('transparent=1');
         expect(url).toContain('obsTheme=static');
         expect(url.slice(url.indexOf('cfg=')).includes('&')).toBe(false);
+    });
+
+    // The two params are not symmetric: daylight is omitted when off, transparent is always stated
+    // so an absent value can never be mistaken for the toggle being on.
+    it('omits daylight when off but still states transparent=0', async () => {
+        const url = await buildCurrentObsUrl('playercap');
+        expect(url).not.toContain('daylight=');
+        expect(url).toContain('transparent=0');
     });
 });

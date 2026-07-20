@@ -13,7 +13,7 @@ import {
 // The shareable appearance config codec: theme + visual settings <-> the minified `folia-theme://`
 // shortcode carried by config codes and by the OBS URL's cfg param. Lifted out of the settings
 // subview so the OBS URL builder and the overlay parser can read it without importing a React
-// component (obsUrl.ts and webObsTarget.ts both document avoiding that edge).
+// component. Keep it a leaf: no store, no services, no components.
 
 export const compressTheme = (t: Theme): any => ({
     n: t.name,

@@ -167,7 +167,7 @@ const { t } = useTranslation();
 
 新增设置时先套用 `settings-feature-integration`：
 
-- 视觉相关设置必须进入 `AppearanceSettingsSubview.tsx` 的导入导出链路。
+- 视觉相关设置必须进入导入导出链路：编解码在 `src/utils/appearanceCodec.ts`，取值与应用在 `AppearanceSettingsSubview.tsx`。
 - 功能性设置或可执行动作必须注册到 `src/components/command-palette/commandRegistry.ts`。
 - 设置状态优先复用 `src/stores/useSettingsUiStore.ts`，不要在组件里另起一套 localStorage 读写。
 

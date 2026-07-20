@@ -109,13 +109,23 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         return 'none';
     });
 
-    // Repair only: a selection whose option no longer exists falls back, but a deliberate pick is
-    // never overwritten. Re-running the initializer here used to discard the user's choice on any
-    // theme change. bgMode is not a dependency -- the buttons are gated on the themes themselves.
+    // Set once the user picks from the three buttons; until then the selection is only a default and
+    // may keep tracking the available themes.
+    const exportThemePickedRef = React.useRef(false);
+    const pickExportThemeType = (value: 'custom' | 'ai' | 'none') => {
+        exportThemePickedRef.current = true;
+        setExportThemeType(value);
+    };
+
+    // A deliberate pick is never overwritten -- only repaired when the option it names disappears.
+    // Anything else still follows the available themes, so a regenerated AI theme reselects itself
+    // instead of leaving the export stuck on 'none'. bgMode is not a dependency: the buttons are
+    // gated on the themes themselves.
     React.useEffect(() => {
-        setExportThemeType(prev => (
-            (prev === 'ai' && !aiTheme) || (prev === 'custom' && !customTheme) ? 'none' : prev
-        ));
+        setExportThemeType(prev => {
+            if (!exportThemePickedRef.current) return aiTheme ? 'ai' : customTheme ? 'custom' : 'none';
+            return (prev === 'ai' && !aiTheme) || (prev === 'custom' && !customTheme) ? 'none' : prev;
+        });
     }, [aiTheme, customTheme]);
 
     // Access ZUSTAND settings store directly for setters & configurations
@@ -262,7 +272,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                 ? { type: 'info', text: t('options.obsUrlCustomFontHint') }
                 : { type: 'success', text: t('status.copied') });
         } catch (err) {
+            // The URL is built asynchronously, so a browser that requires the write to stay inside the
+            // click's own task can reject here. Say so instead of leaving the button looking inert.
             console.error('Failed to copy OBS URL:', err);
+            store.statusSetter?.({ type: 'error', text: t('status.copyFailed') });
         }
     };
 
@@ -758,15 +771,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                         <div className="text-xs font-semibold opacity-60" style={{ color: 'var(--text-secondary)' }}>
                             {t('options.exportThemeLabel')}
                         </div>
-                        {/* The OBS copy button sits in the same card, so say outright that this does not reach it. */}
-                        <div className="text-xs opacity-50 max-w-[400px]" style={{ color: 'var(--text-secondary)' }}>
-                            {t('options.exportThemeObsHint')}
-                        </div>
                         <div className="flex flex-wrap gap-2 mt-1">
                             {aiTheme && (
                                 <button
                                     type="button"
-                                    onClick={() => setExportThemeType('ai')}
+                                    onClick={() => pickExportThemeType('ai')}
                                     className="px-2.5 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5"
                                     style={getAccentOptionStyle(exportThemeType === 'ai')}
                                 >
@@ -777,7 +786,7 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                             {customTheme && (
                                 <button
                                     type="button"
-                                    onClick={() => setExportThemeType('custom')}
+                                    onClick={() => pickExportThemeType('custom')}
                                     className="px-2.5 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5"
                                     style={getAccentOptionStyle(exportThemeType === 'custom')}
                                 >
@@ -787,7 +796,7 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                             )}
                             <button
                                 type="button"
-                                onClick={() => setExportThemeType('none')}
+                                onClick={() => pickExportThemeType('none')}
                                 className="px-2.5 py-1.5 rounded-lg text-xs border transition-all flex items-center gap-1.5"
                                 style={getAccentOptionStyle(exportThemeType === 'none')}
                             >

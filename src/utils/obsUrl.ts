@@ -1,6 +1,6 @@
 // src/utils/obsUrl.ts
-// Small helpers to build/parse OBS URLs (pure strings, no external deps - avoids a
-// cycle with the appearance codec / settings component).
+// Small helpers to build/parse OBS URLs: pure string work with no external deps, so both the app's
+// URL builder and the OBS overlay's parser can use them.
 
 // Extract the appearance shortcode from user input: the input may be a full OBS URL
 // (with a cfg query param) or a bare shortcode / JSON. If it is a URL carrying cfg,

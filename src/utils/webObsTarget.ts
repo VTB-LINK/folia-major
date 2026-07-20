@@ -3,8 +3,8 @@ import { getWebAiConfig } from '../services/webAiConfig';
 
 // src/utils/webObsTarget.ts
 // Resolve which browser-direct OBS source the web stage selection targets, plus its connection
-// params, for the copy-OBS-URL buttons. Kept separate from currentObsUrl/obsUrl so appearance
-// components can import the selector without a cycle through the appearance codec.
+// params, for the copy-OBS-URL buttons. Kept separate from currentObsUrl/obsUrl because it reads
+// the settings store and the AI config, which the URL builders and the codec stay free of.
 
 export type WebObsSource = 'now-playing' | 'playercap';
 
@@ -31,7 +31,9 @@ export function resolveWebObsTarget(): WebObsTarget | null {
   const extra: Record<string, string> = {};
   // The mode marker (static | builtin | ai) is authoritative: the overlay resolves its theme from
   // this, not from whether cfg happens to carry one. It rides ahead of cfg, so the mode of a link
-  // already pasted into OBS stays readable — and editable — without going back to the app.
+  // already pasted into OBS stays readable at a glance. Editing it in place only demotes a static
+  // link to a dynamic one — the reverse needs a fresh copy, since the overlay cannot invent the
+  // theme a dynamic link never carried.
   extra.obsTheme = s.webObsThemeMode;
   // Dynamic·AI (source-neutral): on the fork's keyless relay, carry the user's own AI key so the
   // overlay (a separate browser context that can't read webAiConfig) can generate. Server-key

@@ -3,7 +3,7 @@ import { compressConfig, readSavedCustomTheme } from './appearanceCodec';
 import { buildVisualSettingsConfig } from './visualSettingsConfig';
 import { buildObsSourceUrl } from './obsUrl';
 import { useSettingsUiStore } from '../stores/useSettingsUiStore';
-import { readStoredLastAppliedThemePointer } from '../services/themePreferences';
+import { applyStoredAnimationIntensityToDualTheme, readStoredLastAppliedThemePointer } from '../services/themePreferences';
 import { getLastDualTheme } from '../services/themeCache';
 import { BASE_DUAL_THEME } from '../services/baseThemes';
 
@@ -37,7 +37,11 @@ export async function buildCurrentObsUrl(obsSource: string, host = '', extra?: R
   // builtin, plus a regenerated AI theme under 'ai'). 'static' must always bake something: a
   // theme-less cfg is exactly what the overlay treats as "go dynamic", so a user on the default
   // preset would silently get per-song colors after asking for a frozen link.
-  const theme = webObsThemeMode === 'static' ? ((await readEffectiveExportTheme()) ?? BASE_DUAL_THEME) : null;
+  // The saved custom and cached AI themes already carry the stored animation intensity; the base
+  // preset is a plain constant, so apply it here or a user on 'calm' would get 'normal' in OBS.
+  const theme = webObsThemeMode === 'static'
+    ? ((await readEffectiveExportTheme()) ?? applyStoredAnimationIntensityToDualTheme(BASE_DUAL_THEME))
+    : null;
   const config = { theme, ...buildVisualSettingsConfig() };
   const mergedExtra: Record<string, string> = {};
   if (isDaylight) mergedExtra.daylight = '1';

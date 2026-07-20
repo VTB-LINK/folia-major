@@ -389,8 +389,9 @@ visualizer/
 #### 7. 视觉调参必须能备份和恢复
 
 - visualizer 模式、背景模式、通用透明度、字体字号和所有 renderer tuning 都属于视觉配置。
-- 当前导入导出入口在 `src/components/modal/settings/AppearanceSettingsSubview.tsx`。
-- 新增视觉设置时，必须同步 `buildCurrentConfig`、`compressConfig`、`decompressConfig`、JSON `validKeys` 和 `handleImportConfig`。
+- 编解码在 `src/utils/appearanceCodec.ts`，取值与应用在 `src/components/modal/settings/AppearanceSettingsSubview.tsx`。
+- 新增视觉设置时，必须同步 `appearanceCodec.ts` 的 `compressConfig`、`decompressConfig`、JSON `validKeys`，以及外观页的 `buildCurrentConfig` 和 `handleImportConfig`。
+- 若该设置也要随 OBS 链接带出，还需同步 `src/utils/visualSettingsConfig.ts`。
 - 不要只在 `useSettingsUiStore.ts` 持久化，却漏掉 shortcode / JSON 导入导出。
 
 ## 推荐的内部结构
@@ -679,7 +680,7 @@ resetSettings: props => {
 
 新增设置还要判断是否触发 `skills/settings-feature-integration/SKILL.md`：
 
-- 视觉相关设置必须接入 `AppearanceSettingsSubview.tsx` 的导入导出。
+- 视觉相关设置必须接入导入导出：编解码在 `src/utils/appearanceCodec.ts`，取值与应用在 `AppearanceSettingsSubview.tsx`。
 - 功能性设置或可执行动作必须接入 `src/components/command-palette/commandRegistry.ts`。
 
 #### `src/components/modal/ThemePark.tsx`
