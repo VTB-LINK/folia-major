@@ -14,7 +14,8 @@ import { ObsCopyUrlButton } from '../../shared/ObsCopyUrlButton';
 import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { compressConfig, decompressConfig, readSavedCustomTheme } from '../../../utils/appearanceCodec';
-import { buildObsSourceUrl, extractCfgFromInput } from '../../../utils/obsUrl';
+import { extractCfgFromInput } from '../../../utils/obsUrl';
+import { buildCurrentObsUrl } from '../../../utils/currentObsUrl';
 import { resolveWebObsTarget, selectWebObsSource } from '../../../utils/webObsTarget';
 import { buildVisualSettingsConfig, hasCustomObsFont } from '../../../utils/visualSettingsConfig';
 
@@ -250,15 +251,10 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
     const handleCopyObsUrl = async () => {
         const target = resolveWebObsTarget();
         if (!target) return;
-        const config = buildCurrentConfig();
-        // Dynamic OBS theme modes ('builtin'/'ai') bake no theme so the overlay resolves one per song; 'static' burns it in.
-        if (useSettingsUiStore.getState().webObsThemeMode !== 'static') config.theme = null;
-        const code = compressConfig(config);
-        // daylight + transparent baked into extra (before cfg); PlayerCap host/params come from the resolved target.
-        const extra: Record<string, string> = {};
-        if (isDaylight) extra.daylight = '1';
-        extra.transparent = transparentPlayerBackground ? '1' : '0';
-        const url = buildObsSourceUrl(target.source, code, target.host, { ...extra, ...target.extra });
+        // Same builder as the stage header's button, so both produce an identical link. The theme
+        // follows the OBS mode and the applied theme -- not the export toggle below, which governs
+        // the config code only.
+        const url = await buildCurrentObsUrl(target.source, target.host, target.extra);
         try {
             await navigator.clipboard.writeText(url);
             setCopiedType('obsurl');
