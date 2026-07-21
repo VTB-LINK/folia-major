@@ -4,6 +4,7 @@ import type {
   PlayerCapConnectionStatus,
   PlayerCapEvent,
   PlayerCapLyricUpdateData,
+  PlayerCapPlaybackData,
   PlayerCapPlayerSwitchData,
   PlayerCapSongInfoData,
   PlayerCapStatusData,
@@ -119,12 +120,43 @@ export function reducePlayerCapEvent(
       return { ...state, clock: { ...state.clock, positionSec: (data.progress || 0) * state.clock.durationSec, anchoredAtMs: nowMs } };
     }
 
-    case 'playback_pause':
-      return { ...state, playerState: 'paused', clock: { ...state.clock, positionSec: currentPosition(state.clock, nowMs), anchoredAtMs: nowMs, playing: false } };
+    // Both carry the real playback position in play_time (see PlayerCapPlaybackData), so both
+    // re-anchor from it rather than from an extrapolation. The contract asks for exactly this:
+    // "前端收到 playback_pause 应停止时间插值，收到 playback_resume 应以 play_time 为锚点重新开始插值".
+    //
+    // It matters most on resume, which is also the seek notification: the jumped-to position is in
+    // this event and nowhere else, so waiting for the next lyric_update leaves the previous line on
+    // screen for as long as that takes. It also beats the replayed cache after a long pause, where
+    // all_lyrics comes back holding the progress from before the pause while this holds the truth.
+    case 'playback_pause': {
+      const paused = (event.data as PlayerCapPlaybackData)?.play_time;
+      return {
+        ...state,
+        playerState: 'paused',
+        clock: {
+          ...state.clock,
+          positionSec: Number.isFinite(paused) ? paused : currentPosition(state.clock, nowMs),
+          anchoredAtMs: nowMs,
+          playing: false,
+        },
+      };
+    }
 
-    case 'playback_resume':
-      // resume only provides play_time (the display basis) and does not recompute the clock position; set to playing and wait for the next progress event to re-anchor.
-      return { ...state, playerState: 'playing', clock: { ...state.clock, anchoredAtMs: nowMs, playing: true } };
+    case 'playback_resume': {
+      const resumed = (event.data as PlayerCapPlaybackData)?.play_time;
+      return {
+        ...state,
+        playerState: 'playing',
+        clock: {
+          ...state.clock,
+          // Missing value: keep the anchor and let the next progress event correct it, which is what
+          // this branch did before play_time was honored at all.
+          positionSec: Number.isFinite(resumed) ? resumed : currentPosition(state.clock, nowMs),
+          anchoredAtMs: nowMs,
+          playing: true,
+        },
+      };
+    }
 
     case 'lyric_idle':
       // Notification that the current lyric session has ended (song finished / track switch / window closed; emitted only by wesing): clear lyrics only to avoid leftovers; playback state / track are driven by status_update.

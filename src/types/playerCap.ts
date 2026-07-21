@@ -80,7 +80,16 @@ export interface PlayerCapLyricUpdateData {
   text_detailed: PlayerCapMaybeDetailed;
 }
 
-// Payload for playback_pause / playback_resume. play_time is the display position after the pause/seek (display basis).
+// Payload for playback_pause / playback_resume.
+//
+// Despite the shared name, this play_time is NOT the one on a lyric line. A line's play_time is when
+// that line goes on screen (timestamp - offset); this one is the real playback position, the same
+// quantity as progress x duration, with no offset applied. The contract calls it "当前播放时间" and
+// "跳转后的新位置", and a capture covering one pause and three seeks confirmed it: every event
+// matched the surrounding progress x duration to within a millisecond.
+//
+// resume doubles as the seek notification (it fires on any discontinuous jump, so it outnumbers
+// pause), and the position it jumped to is carried here and nowhere else.
 export interface PlayerCapPlaybackData {
   play_time: number;
 }
