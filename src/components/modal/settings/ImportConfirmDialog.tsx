@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import ThemedDialog from '../../shared/ThemedDialog';
 import { getVisualizerModeLabel, hasVisualizerMode } from '../../visualizer/registry';
 import { getVisualizerBackgroundModeLabel, hasVisualizerBackgroundMode } from '../../visualizer/backgrounds/registry';
-import { THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportChange, type ImportGroup, type ImportPlan } from '../../../utils/appearanceImportPlan';
-import { resolveSettingLabelKey } from '../../../utils/settingLabelLookup';
+import { ACTIVATE_CUSTOM_THEME_KEY, THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportChange, type ImportGroup, type ImportPlan } from '../../../utils/appearanceImportPlan';
+import { resolveSettingLabelKey, resolveSettingValueLabelKey } from '../../../utils/settingLabelLookup';
 
 // src/components/modal/settings/ImportConfirmDialog.tsx
 // What an imported config would change, before it is applied, chosen field by field. Rows spell out
@@ -41,6 +41,7 @@ const DERIVED_LABEL_KEYS: Record<string, string> = {
 const FIELD_LABEL_KEYS: Record<string, string> = {
     [THEME_LIGHT_KEY]: 'options.importFieldThemeLight',
     [THEME_DARK_KEY]: 'options.importFieldThemeDark',
+    [ACTIVATE_CUSTOM_THEME_KEY]: 'options.importFieldActivateCustomTheme',
     visualizerMode: 'options.visualizerMode',
     visualizerOpacity: 'options.visualizerOpacity',
     hidePlayerTranslationSubtitle: 'options.hidePlayerTranslationSubtitle',
@@ -80,6 +81,59 @@ const TUNING_MODES: Record<string, string> = {
     monetTuning: 'monet',
 };
 
+interface BoxTone {
+    checkedFill: string;
+    uncheckedBorder: string;
+    mutedColor: string;
+}
+
+// Module scope on purpose. Declared inside the dialog it would be a new component type on every
+// render, so React would remount each checkbox on every toggle and drop keyboard focus with it.
+//
+// `label` is the row's own wording: the visible text sits in a sibling span, so without it the
+// control announces as an unnamed button.
+const BoxControl: React.FC<{
+    state: 'on' | 'off' | 'partial' | 'locked';
+    tone: BoxTone;
+    label?: string;
+    onClick?: () => void;
+}> = ({ state, tone, label, onClick }) => {
+    const className = `flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+        state === 'off' ? `${tone.uncheckedBorder} bg-transparent`
+            : state === 'locked' ? `${tone.uncheckedBorder} opacity-40 cursor-default`
+                : 'border-transparent'
+    }`;
+    const style = state === 'on' || state === 'partial' ? { backgroundColor: tone.checkedFill } : undefined;
+    const glyph = (
+        <>
+            {state === 'partial' && <Minus size={13} className="text-white" />}
+            {(state === 'on' || state === 'locked') && <Check size={13} className={state === 'locked' ? tone.mutedColor : 'text-white'} />}
+        </>
+    );
+
+    // A locked box has nothing to toggle, and the unchanged section puts one inside its own header
+    // button -- a button within a button is invalid and swallows clicks on that region.
+    if (state === 'locked') {
+        return <span aria-hidden="true" className={className} style={style}>{glyph}</span>;
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            // A checkbox rather than a toggle button: the group box has a third, mixed state that
+            // aria-pressed cannot express and would report as simply unchecked.
+            role="checkbox"
+            aria-checked={state === 'partial' ? 'mixed' : state === 'on'}
+            aria-label={label}
+            className={className}
+            style={style}
+        >
+            {glyph}
+        </button>
+    );
+};
+
 const isHexColor = (value: unknown): value is string =>
     typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value.trim());
 
@@ -114,11 +168,26 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
 
     if (!plan) return null;
 
-    const toggleKey = (key: string) => {
-        const next = new Set(selected);
-        if (next.has(key)) next.delete(key); else next.add(key);
-        setSelected(next);
+    // Some rows cannot move alone: the setter that applies one also writes another (see the plan's
+    // `forces`). Selecting pulls in what it forces; deselecting drops whatever forces it, so the
+    // checkbox never claims a combination the import cannot produce.
+    const withLinks = (keys: Set<string>, key: string, on: boolean) => {
+        const next = new Set(keys);
+        const queue = [key];
+        while (queue.length) {
+            const current = queue.pop() as string;
+            if (on === next.has(current)) continue;
+            if (on) next.add(current); else next.delete(current);
+
+            const linked = on
+                ? (plan.changes.find(c => c.key === current)?.forces ?? [])
+                : plan.changes.filter(c => c.forces?.includes(current)).map(c => c.key);
+            queue.push(...linked);
+        }
+        return next;
     };
+
+    const toggleKey = (key: string) => setSelected(withLinks(selected, key, !selected.has(key)));
 
     const toggleCollapse = (id: string) => {
         const next = new Set(collapsed);
@@ -132,23 +201,7 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
     const checkedFill = isDaylight ? '#52525b' : '#71717a';
     const uncheckedBorder = isDaylight ? 'border-zinc-900/25' : 'border-white/25';
 
-    const Box: React.FC<{ state: 'on' | 'off' | 'partial' | 'locked'; onClick?: () => void; }> = ({ state, onClick }) => (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={state === 'locked'}
-            aria-pressed={state === 'on'}
-            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                state === 'off' ? `${uncheckedBorder} bg-transparent`
-                    : state === 'locked' ? `${uncheckedBorder} opacity-40 cursor-default`
-                        : 'border-transparent'
-            }`}
-            style={state === 'on' || state === 'partial' ? { backgroundColor: checkedFill } : undefined}
-        >
-            {state === 'partial' && <Minus size={13} className="text-white" />}
-            {(state === 'on' || state === 'locked') && <Check size={13} className={state === 'locked' ? mutedColor : 'text-white'} />}
-        </button>
-    );
+    const tone: BoxTone = { checkedFill, uncheckedBorder, mutedColor };
 
     const fieldLabel = (change: ImportChange) => {
         const mode = TUNING_MODES[change.key];
@@ -158,9 +211,13 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
     };
 
     // `bare` is the unchanged section: both sides are equal, so a nested object has nothing to say
-    // that the label has not already said.
-    const renderValue = (value: unknown, dimmed: boolean, key?: string, bare = false) => {
+    // that the label has not already said. `named` is the panel's own wording for an enum value,
+    // resolved by the caller that knows the field's label key.
+    const renderValue = (value: unknown, dimmed: boolean, key?: string, bare = false, named?: string | null) => {
         const cls = `text-xs ${dimmed ? `${mutedColor} line-through` : ''}`;
+
+        // A row that reads "频谱样式  bar -> line" mixes the panel's wording with the store's ids.
+        if (named) return <span className={cls}>{named}</span>;
 
         // Theme sides are usually named after the preset they were seeded from, so the names would
         // read as an identical pair while the colours are what actually differ.
@@ -214,11 +271,13 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
         const children = change.children ?? [];
         const opaque = children.length > 0;
         const open = !collapsed.has(`child:${change.key}`);
+        // Passed to the label lookup so a key that two of these would share is not used for either.
+        const childPaths = children.map(c => c.key);
 
         return (
             <li key={change.key} className="text-xs">
                 <div className="flex items-center gap-2">
-                    <Box state={on ? 'on' : 'off'} onClick={() => toggleKey(change.key)} />
+                    <BoxControl state={on ? 'on' : 'off'} tone={tone} label={fieldLabel(change)} onClick={() => toggleKey(change.key)} />
                     <span className={`min-w-0 flex-1 truncate ${mutedColor}`}>{fieldLabel(change)}</span>
                     {opaque ? (
                         <button
@@ -244,15 +303,21 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                     <ul className={`mt-1 space-y-1 border-l pl-3 ${isDaylight ? 'border-zinc-900/10' : 'border-white/10'}`}>
                         {children.map((child) => {
                             // The panel's own label for this setting, if it has one.
-                            const labelKey = resolveSettingLabelKey(change.key, child.key, k => i18n.exists(k));
+                            const labelKey = resolveSettingLabelKey(change.key, child.key, k => i18n.exists(k), childPaths);
+                            // The panel names each choice of an enum by hanging it off the field's
+                            // own key, so the value can be worded the same way the settings are.
+                            const named = (value: unknown) => {
+                                const valueKey = resolveSettingValueLabelKey(labelKey, value, k => i18n.exists(k));
+                                return valueKey ? t(valueKey) : null;
+                            };
                             return (
                             <li key={child.key} className="flex items-center gap-2">
                                 <span className={`min-w-0 flex-1 truncate ${mutedColor} ${labelKey ? 'text-xs' : 'font-mono text-[11px]'}`}>
                                     {labelKey ? t(labelKey) : child.key}
                                 </span>
-                                {renderValue(child.from, false)}
+                                {renderValue(child.from, false, undefined, false, named(child.from))}
                                 <span className={`shrink-0 ${mutedColor}`}>→</span>
-                                {renderValue(child.to, !on)}
+                                {renderValue(child.to, !on, undefined, false, named(child.to))}
                             </li>
                             );
                         })}
@@ -287,7 +352,10 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                     <button
                         type="button"
                         onClick={() => onConfirm([...selected])}
-                        disabled={selected.size === 0}
+                        // Nothing to pick is not the same as picking nothing: a plan whose changes
+                        // are all derived, or which has none at all, still has to be dismissable
+                        // through the confirm button rather than only through cancel.
+                        disabled={selectableKeys.length > 0 && selected.size === 0}
                         className="rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold transition-colors hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                         {t('options.importApplySelected')}
@@ -305,22 +373,28 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
 
                 {plan.groups.map((group) => {
                     const changes = plan.changes.filter(c => c.group === group);
-                    const derived = changes.filter(c => c.derived);
                     const plain = changes.filter(c => !c.derived);
+                    // A derived row is only real while the row that causes it is still accepted, so
+                    // it is resolved once here and drives both the warnings and the count.
+                    const derived = changes.filter(c => c.derived && (!c.causedBy || c.causedBy.some(k => selected.has(k))));
                     const picked = plain.filter(c => selected.has(c.key)).length;
                     const groupState = picked === 0 ? 'off' : picked === plain.length ? 'on' : 'partial';
                     const isOpen = !collapsed.has(group);
 
+                    // Everything this group had to say has been declined; an empty card with a
+                    // count that no longer matches anything is worse than no card.
+                    if (plain.length === 0 && derived.length === 0) return null;
+
                     return (
                         <div key={group} className={`rounded-2xl border px-4 py-3 ${rowClass}`}>
                             <div className="flex items-center gap-3">
-                                <Box
-                                    state={groupState}
+                                <BoxControl
+                                    state={plain.length === 0 ? 'locked' : groupState}
+                                    tone={tone}
+                                    label={t(GROUP_LABEL_KEYS[group])}
                                     onClick={() => {
-                                        const next = new Set(selected);
-                                        if (groupState === 'on') plain.forEach(c => next.delete(c.key));
-                                        else plain.forEach(c => next.add(c.key));
-                                        setSelected(next);
+                                        const on = groupState !== 'on';
+                                        setSelected(plain.reduce((acc, c) => withLinks(acc, c.key, on), selected));
                                     }}
                                 />
                                 <span className="text-sm font-medium">{t(GROUP_LABEL_KEYS[group])}</span>
@@ -329,12 +403,13 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                                     onClick={() => toggleCollapse(group)}
                                     className={`ml-auto flex items-center gap-1 text-xs ${mutedColor} transition-opacity hover:opacity-100`}
                                 >
-                                    {t('options.importChangeCount', { count: changes.length })}
+                                    {t('options.importChangeCount', { count: plain.length + derived.length })}
                                     <ChevronDown size={13} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                                 </button>
                             </div>
 
-                            {/* Always visible: these are the changes the config did not ask for. */}
+                            {/* The changes the config did not ask for, shown without a checkbox:
+                                they are not chosen, they follow. */}
                             {derived.map(change => (
                                 <div key={change.key} className="mt-2 flex items-start gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
                                     <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -342,7 +417,14 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                                 </div>
                             ))}
 
-                            {plain.some(c => c.note === 'fontUnavailable') && (
+                            {plain.some(c => c.note === 'listMerged' && selected.has(c.key)) && (
+                                <div className={`mt-2 flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${isDaylight ? 'bg-zinc-900/5 text-zinc-500' : 'bg-white/5 text-zinc-400'}`}>
+                                    <Info size={13} className="mt-0.5 shrink-0" />
+                                    <span>{t('options.importListMerged')}</span>
+                                </div>
+                            )}
+
+                            {plain.some(c => c.note === 'fontUnavailable' && selected.has(c.key)) && (
                                 <div className={`mt-2 flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${isDaylight ? 'bg-zinc-900/5 text-zinc-500' : 'bg-white/5 text-zinc-400'}`}>
                                     <Info size={13} className="mt-0.5 shrink-0" />
                                     <span>{t('options.importFontUnavailable')}</span>
@@ -361,7 +443,7 @@ const ImportConfirmDialog: React.FC<ImportConfirmDialogProps> = ({
                             onClick={() => toggleCollapse('__unchanged')}
                             className="flex w-full items-center gap-3"
                         >
-                            <Box state="locked" />
+                            <BoxControl state="locked" tone={tone} />
                             <span className="text-sm font-medium">{t('options.importUnchanged')}</span>
                             <span className={`ml-auto flex items-center gap-1 text-xs ${mutedColor}`}>
                                 {t('options.importItemCount', { count: plan.unchanged.length })}

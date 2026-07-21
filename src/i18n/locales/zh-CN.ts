@@ -1035,6 +1035,8 @@ export default {
     "importUnchanged": "未改变的项",
     "importFieldThemeLight": "日间配色",
     "importFieldThemeDark": "夜间配色",
+    "importFieldActivateCustomTheme": "切换到自定义主题",
+    "importListMerged": "网页背景按条目合并，现有条目不会被删除",
     "importValueOn": "开",
     "importValueOff": "关",
     "importValueNone": "未设置",

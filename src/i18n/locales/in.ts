@@ -937,6 +937,8 @@ export default {
     "importUnchanged": "Sudah sama",
     "importFieldThemeLight": "Warna siang",
     "importFieldThemeDark": "Warna malam",
+    "importFieldActivateCustomTheme": "Beralih ke tema kustom",
+    "importListMerged": "Latar halaman web digabungkan per entri; yang sudah ada tidak dihapus",
     "importValueOn": "Aktif",
     "importValueOff": "Nonaktif",
     "importValueNone": "Belum diatur",

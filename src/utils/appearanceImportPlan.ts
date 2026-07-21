@@ -3,6 +3,8 @@ import {
     resolveSongThemeAutoSwitchChange,
     type ThemePreferenceSwitchState,
 } from '../services/themePreferences';
+import { mergeUrlBackgroundList } from './urlBackground';
+import type { UrlBackgroundItem } from '../types';
 
 // src/utils/appearanceImportPlan.ts
 // What an imported config would actually change, computed before anything is applied. Pure: the
@@ -26,9 +28,16 @@ export interface ImportChange {
     to: unknown;
     // True when the config never mentioned this field and the change follows from a resolver rule.
     derived?: boolean;
-    // Informational, does not block the row: the incoming font is not installed here, so it will be
-    // accepted but render through the fallback stack.
-    note?: 'fontUnavailable';
+    // For a derived change, the picked fields that would cause it. A derived row is only real while
+    // one of them is still selected, so declining the cause must also retract the warning.
+    causedBy?: string[];
+    // Rows this one drags along: accepting it necessarily accepts them too, because the setter that
+    // applies it also writes theirs. Declining any of them therefore has to decline this one.
+    forces?: string[];
+    // Informational, does not block the row: `fontUnavailable` means the incoming font is not
+    // installed here and will render through the fallback stack; `listMerged` means the row's
+    // "after" value is the merge of both lists rather than the incoming one on its own.
+    note?: 'fontUnavailable' | 'listMerged';
     // Leaf-level differences inside a nested settings object. A tuning bundle changes as a whole,
     // but saying so is useless when one slider moved — these let the row be opened and read.
     children?: ImportChange[];
@@ -47,6 +56,12 @@ export interface ImportPlan {
 // the common case, and a single theme row cannot express it.
 export const THEME_LIGHT_KEY = 'themeLight';
 export const THEME_DARK_KEY = 'themeDark';
+
+// Switching to the custom theme is its own change: a config carries a theme, but taking it says
+// nothing about whether the app should stop showing the default or AI theme and display it. Offered
+// whenever the config has a theme and custom is not already the active mode, so importing a theme
+// that happens to match the saved one still has a way to activate it.
+export const ACTIVATE_CUSTOM_THEME_KEY = 'activateCustomTheme';
 
 // Every config field the import path actually applies, mapped to the group it is presented under.
 // Fields the codec round-trips but the import path does not apply are deliberately absent, so the
@@ -90,6 +105,33 @@ const FIELD_GROUPS: Record<string, ImportGroup> = {
     songThemeAutoGenerateEnabled: 'songTheme',
 };
 
+// Fields the import applies only when the incoming value is truthy, so an incoming null means "the
+// exporter had none" rather than "clear yours". Offering them would promise a change that the apply
+// path skips. Kept in step with the guards in applyImportedConfig.
+const TRUTHY_GUARDED_FIELDS = new Set([
+    'visualizerMode',
+    'visualizerBackgroundMode',
+    'lyricsFontStyle',
+    'lyricsFontFallbackFamilies',
+    'lyricsCustomFontFamily',
+    'subtitleFontStyle',
+    'subtitleFontFallbackFamilies',
+    'visualizerTunings',
+    'classicTuning',
+    'cadenzaTuning',
+    'partitaTuning',
+    'fumeTuning',
+    'claddaghTuning',
+    'cappellaTuning',
+    'tiltTuning',
+    'dioramaTuning',
+    'monetTuning',
+    'monetBackgroundTuning',
+    'nomandBackgroundTuning',
+    'latentBackgroundTuning',
+    'urlBackgroundSelectedId',
+]);
+
 // Per-renderer tunings the import skips whenever the visualizerTunings bundle is present. The three
 // background tunings are not in this set: they are applied unconditionally.
 const BUNDLED_TUNING_FIELDS = new Set([
@@ -119,6 +161,11 @@ const isSameValue = (a: unknown, b: unknown): boolean => {
 
 // A theme side is compared on what it renders as. name/provider/description are labels, and an empty
 // list is the same as an absent one — comparing those too would report a change the user cannot see.
+//
+// animationIntensity is deliberately absent: saveCustomDualTheme runs the saved theme through
+// applyStoredAnimationIntensityToDualTheme, which overwrites both sides with this machine's stored
+// intensity. Comparing it would report a difference that the save discards, and re-importing the
+// same config would report it again forever.
 const THEME_SIDE_FIELDS = [
     'backgroundColor',
     'primaryColor',
@@ -126,7 +173,6 @@ const THEME_SIDE_FIELDS = [
     'secondaryColor',
     'fontStyle',
     'fontFamily',
-    'animationIntensity',
     'wordColors',
     'lyricsIcons',
 ] as const;
@@ -147,6 +193,57 @@ const isSameThemeSide = (a: unknown, b: unknown): boolean => {
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+// A tuning leaf belongs to `renderer` either because the whole object is that renderer's, or because
+// the visualizerTunings bundle put the renderer's name at the head of the path.
+const leafBelongsTo = (ownerField: string, leafPath: string, renderer: string) =>
+    ownerField === `${renderer}Tuning` || leafPath.startsWith(`${renderer}.`);
+
+// Local assets a config cannot carry: an uploaded image or emoji pack lives in this browser only, so
+// a source that names one is meaningless on a machine that does not have it.
+export interface LocalAssetAvailability {
+    // Whether this machine has a custom Cappella emoji pack.
+    hasCappellaEmojiPack?: boolean;
+    // Whether this machine has an uploaded Monet global background image.
+    hasMonetBackgroundImage?: boolean;
+    // Whether this machine has an uploaded Monet portrait image.
+    hasMonetPortraitImage?: boolean;
+}
+
+// Leaves that will not hold whatever the config says, either because the setter overwrites them or
+// because an app-level effect puts them straight back. Listing one promises a change that cannot
+// land, and because the value never converges the same config reports it again on every re-import —
+// the same trap animationIntensity sets on a theme side.
+const isPinnedLeaf = (
+    ownerField: string,
+    leafPath: string,
+    to: unknown,
+    assets: LocalAssetAvailability,
+): boolean => {
+    const leaf = leafPath.split('.').pop();
+
+    // handleSetCadenzaTuning writes beamIntensity: 0 after the patch; the beam is disabled and its
+    // slider was removed, so no value other than 0 can survive.
+    if (leaf === 'beamIntensity' && leafBelongsTo(ownerField, leafPath, 'cadenza')) return true;
+
+    // handleSetCappellaTuning falls back to 'builtin' unless this machine has an emoji pack.
+    if (leaf === 'emojiPackSource' && to === 'custom' && !assets.hasCappellaEmojiPack
+        && leafBelongsTo(ownerField, leafPath, 'cappella')) return true;
+
+    // These two are not clamped by their setters — resolveMonetBackgroundSource and
+    // resolveMonetPortraitSource pass them through — but useAppPreferences reverts each on the next
+    // tick when the image it names is not stored here. The write lands and is then undone.
+    //
+    // monetBackgroundTuning is neither `monetTuning` nor part of the bundle, so it only ever arrives
+    // as a top-level field with a bare leaf; leafBelongsTo would not match it.
+    if (leaf === 'backgroundSource' && to === 'uploaded-global' && !assets.hasMonetBackgroundImage
+        && ownerField === 'monetBackgroundTuning') return true;
+
+    if (leaf === 'portraitSource' && to === 'custom' && !assets.hasMonetPortraitImage
+        && leafBelongsTo(ownerField, leafPath, 'monet')) return true;
+
+    return false;
+};
 
 // Every leaf that differs between two settings objects, keyed by its dotted path. Recursing keeps
 // nested groups (a renderer's geometryVisibility, say) readable instead of collapsing to "changed".
@@ -186,6 +283,11 @@ export interface ImportPlanInput {
     customFontLabel?: string | null;
     // From isFontFamilyAvailable. Undefined means it was not measured, which stays quiet.
     incomingFontAvailable?: boolean;
+    // Whether the custom theme is the mode on screen right now. Drives the activate row.
+    isCustomThemeActive?: boolean;
+    // Which browser-local assets exist here. A source that names one this machine does not have is
+    // reverted, so offering it would promise a change that cannot land.
+    assets?: LocalAssetAvailability;
 }
 
 export function buildImportPlan({
@@ -195,6 +297,8 @@ export function buildImportPlan({
     customFontSource,
     customFontLabel,
     incomingFontAvailable,
+    isCustomThemeActive,
+    assets = {},
 }: ImportPlanInput): ImportPlan {
     const changes: ImportChange[] = [];
     const unchanged: ImportChange[] = [];
@@ -209,15 +313,61 @@ export function buildImportPlan({
             if (to === undefined) continue;
             record({ group: 'theme', key, from, to }, isSameThemeSide(from, to));
         }
+
+        // Switching to the custom theme is its own row, because a config whose theme already matches
+        // the saved one has no side to pick and would otherwise offer no way to switch to it.
+        //
+        // It is not a free choice alongside a side, though: saveCustomDualTheme sets the mode to
+        // custom as part of saving, so taking someone's colours necessarily shows them. The rows are
+        // linked rather than left to promise a combination the setter cannot produce.
+        if (!isCustomThemeActive) {
+            changes.push({ group: 'theme', key: ACTIVATE_CUSTOM_THEME_KEY, from: false, to: true });
+            for (const change of changes) {
+                if (change.key === THEME_LIGHT_KEY || change.key === THEME_DARK_KEY) {
+                    change.forces = [ACTIVATE_CUSTOM_THEME_KEY];
+                }
+            }
+        }
     }
 
     // The import applies the per-renderer tunings only when the bundle is absent, so listing them
     // alongside a bundle would promise changes that never happen.
     const bundled = incoming.visualizerTunings !== undefined;
 
+    // The list is merged rather than replaced, so the incoming array is not what ends up stored.
+    // Diff against the merge instead, or the row would count items that never appear.
+    const mergedUrlList = incoming.urlBackgroundList !== undefined
+        ? mergeUrlBackgroundList((current.urlBackgroundList as UrlBackgroundItem[] | undefined) ?? [], incoming.urlBackgroundList)
+        : null;
+
     for (const [key, group] of Object.entries(FIELD_GROUPS)) {
         if (incoming[key] === undefined) continue;
         if (bundled && BUNDLED_TUNING_FIELDS.has(key)) continue;
+        if (TRUTHY_GUARDED_FIELDS.has(key) && !incoming[key]) continue;
+
+        if (key === 'urlBackgroundList' && mergedUrlList) {
+            const change: ImportChange = { group, key, from: current[key], to: mergedUrlList };
+            const same = isSameValue(mergedUrlList, current[key]);
+            if (!same) change.note = 'listMerged';
+            record(change, same);
+            continue;
+        }
+
+        // Applying a selection that is not in the merged list is skipped, so offering it would
+        // promise a change that cannot happen.
+        if (key === 'urlBackgroundSelectedId') {
+            const currentList = (current.urlBackgroundList as UrlBackgroundItem[] | undefined) ?? [];
+            const inCurrent = currentList.some(item => item.id === incoming[key]);
+            if (!(mergedUrlList ?? currentList).some(item => item.id === incoming[key])) continue;
+
+            const change: ImportChange = { group, key, from: current[key], to: incoming[key] };
+            // The apply path only merges the list when its row was taken, and validates the id
+            // against whatever list results. An id that only the merge introduces therefore needs
+            // the list row to come with it, or the write is silently skipped.
+            if (!inCurrent) change.forces = ['urlBackgroundList'];
+            record(change, isSameValue(incoming[key], current[key]));
+            continue;
+        }
 
         // The font row names what the picker shows, which for an uploaded font is not in `current`
         // at all — reporting "none -> X" there would contradict the screen.
@@ -230,13 +380,22 @@ export function buildImportPlan({
             continue;
         }
 
-        const same = isSameValue(incoming[key], current[key]);
         const change: ImportChange = { group, key, from: current[key], to: incoming[key] };
-        // Nested settings objects carry their own leaf diff so the row can be opened and read.
-        if (!same && isPlainObject(incoming[key])) {
-            const children = diffLeaves(current[key], incoming[key], group);
-            if (children.length) change.children = children;
+        let same = isSameValue(incoming[key], current[key]);
+
+        // A settings object is judged by its leaves, not by isSameValue. That compare is
+        // JSON.stringify-based and so key-order sensitive, while the incoming object is rebuilt by
+        // the codec in its own field order and the current one comes straight from the store — two
+        // semantically identical tunings can serialize differently. The setters take a patch, so
+        // "no leaf differs" is exactly "nothing will change"; reporting a change anyway produces a
+        // row that claims one while showing the same value on both sides and opening to nothing.
+        if (isPlainObject(incoming[key])) {
+            const children = diffLeaves(current[key], incoming[key], group)
+                .filter(child => !isPinnedLeaf(key, child.key, child.to, assets));
+            same = children.length === 0;
+            if (!same) change.children = children;
         }
+
         record(change, same);
     }
 
@@ -249,6 +408,7 @@ export function buildImportPlan({
             from: true,
             to: false,
             derived: true,
+            causedBy: ['lyricsCustomFontFamily'],
         });
     }
 
@@ -267,9 +427,25 @@ export function buildImportPlan({
                 from: switches.isCustomThemePreferred,
                 to: next.isCustomThemePreferred,
                 derived: true,
+                causedBy: [
+                    ...(wantsSwitch !== undefined ? ['songThemeAutoSwitchEnabled'] : []),
+                    ...(wantsGenerate !== undefined ? ['songThemeAutoGenerateEnabled'] : []),
+                ],
             });
         }
     }
+
+    // The two song-theme switches are not independent. resolveSongThemeAutoGenerateChange(_, true)
+    // also turns auto-switch on, and resolveSongThemeAutoSwitchChange(_, false) also turns
+    // auto-generate off — so declining one of the pair while accepting the other cannot hold, and
+    // the dialog has to move them together rather than promise a choice the setters overrule.
+    const linkSwitches = (key: string, when: boolean, target: string) => {
+        const change = changes.find(c => c.key === key && !c.derived);
+        const targetChange = changes.find(c => c.key === target && !c.derived);
+        if (change && targetChange && change.to === when) change.forces = [target];
+    };
+    linkSwitches('songThemeAutoGenerateEnabled', true, 'songThemeAutoSwitchEnabled');
+    linkSwitches('songThemeAutoSwitchEnabled', false, 'songThemeAutoGenerateEnabled');
 
     const present = new Set(changes.map(c => c.group));
     return { changes, unchanged, groups: IMPORT_GROUPS.filter(g => present.has(g)) };

@@ -1031,6 +1031,8 @@ export default {
     "importUnchanged": "Already the same",
     "importFieldThemeLight": "Day colours",
     "importFieldThemeDark": "Night colours",
+    "importFieldActivateCustomTheme": "Switch to the custom theme",
+    "importListMerged": "Webpage backgrounds are merged by entry; nothing you already have is removed",
     "importValueOn": "On",
     "importValueOff": "Off",
     "importValueNone": "Not set",

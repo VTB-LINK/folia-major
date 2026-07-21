@@ -11,10 +11,10 @@ import {
 import { applyVisualizerTuningsToSettings } from '../../visualizer/tuningRegistry';
 import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 import { ObsCopyUrlButton } from '../../shared/ObsCopyUrlButton';
-import { sanitizeUrlBackgroundItem } from '../../../utils/urlBackground';
+import { mergeUrlBackgroundList } from '../../../utils/urlBackground';
 import { getWebAiConfig, setWebAiConfig, type WebAiConfig } from '../../../services/webAiConfig';
 import { compressConfig, decompressConfig, readSavedCustomTheme } from '../../../utils/appearanceCodec';
-import { buildImportPlan, THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportPlan } from '../../../utils/appearanceImportPlan';
+import { ACTIVATE_CUSTOM_THEME_KEY, buildImportPlan, THEME_DARK_KEY, THEME_LIGHT_KEY, type ImportPlan } from '../../../utils/appearanceImportPlan';
 import { isFontFamilyAvailable } from '../../../utils/fontAvailability';
 import ImportConfirmDialog from './ImportConfirmDialog';
 import { extractCfgFromInput } from '../../../utils/obsUrl';
@@ -291,7 +291,8 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         try {
             // Import accepts a bare shortcode/JSON or a full OBS URL (extracting its cfg param), so a look can be re-tuned from someone's link.
             const config = decompressConfig(extractCfgFromInput(importText));
-            const customFont = useSettingsUiStore.getState().lyricsCustomFont;
+            const uiStore = useSettingsUiStore.getState();
+            const customFont = uiStore.lyricsCustomFont;
             const plan = buildImportPlan({
                 incoming: config,
                 current: { ...buildVisualSettingsConfig(), theme: customTheme ?? null },
@@ -301,6 +302,13 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
                 incomingFontAvailable: config.lyricsCustomFontFamily
                     ? isFontFamilyAvailable(String(config.lyricsCustomFontFamily))
                     : undefined,
+                isCustomThemeActive: bgMode === 'custom',
+                // A config names an uploaded image or emoji pack by source, but never carries it.
+                assets: {
+                    hasCappellaEmojiPack: uiStore.storedCappellaEmojiPack.length > 0,
+                    hasMonetBackgroundImage: Boolean(uiStore.storedMonetBackgroundImage),
+                    hasMonetPortraitImage: Boolean(uiStore.storedMonetPortraitImage),
+                },
             });
 
             // Shown even when nothing differs. Skipping straight to a toast reads as the dialog
@@ -319,12 +327,18 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         try {
             // 1. Restore Theme, per side: taking someone's night colours must not drag their day
             // ones along, so the side that was not picked keeps whatever is saved now.
-            if (config.theme && (has(THEME_LIGHT_KEY) || has(THEME_DARK_KEY))) {
+            const savesTheme = Boolean(config.theme) && (has(THEME_LIGHT_KEY) || has(THEME_DARK_KEY));
+            if (savesTheme) {
                 const base = customTheme ?? config.theme;
+                // Saving already switches the mode to custom (see saveCustomDualTheme), which is why
+                // the plan links the activate row to the side rows instead of offering it separately.
                 onSaveCustomTheme({
                     light: has(THEME_LIGHT_KEY) ? config.theme.light : base.light,
                     dark: has(THEME_DARK_KEY) ? config.theme.dark : base.dark,
                 });
+            } else if (has(ACTIVATE_CUSTOM_THEME_KEY)) {
+                // Nothing to save -- the incoming theme is the one already stored, so this row is
+                // the whole of what the user asked for.
                 onApplyCustomTheme();
             }
 
@@ -412,24 +426,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
 
             let mergedUrlList: UrlBackgroundItem[] | undefined;
 
-            if (has('urlBackgroundList') && config.urlBackgroundList && Array.isArray(config.urlBackgroundList)) {
-                // Batch merge: compute the final list once, then apply with a single
-                // store update to avoid sequential localStorage writes per item.
-                const existingMap = new Map(store.urlBackgroundList.map(i => [i.id, { ...i }]));
-                for (const item of config.urlBackgroundList) {
-                    const sanitized = sanitizeUrlBackgroundItem(item);
-                    if (!sanitized) {
-                        continue;
-                    }
-
-                    const existing = existingMap.get(sanitized.id);
-                    existingMap.set(sanitized.id, {
-                        ...(existing ?? { id: sanitized.id }),
-                        url: sanitized.url,
-                        note: sanitized.note,
-                    });
-                }
-                mergedUrlList = Array.from(existingMap.values());
+            if (has('urlBackgroundList') && Array.isArray(config.urlBackgroundList)) {
+                // Batch merge: compute the final list once, then apply with a single store update to
+                // avoid sequential localStorage writes per item. The plan diffs against this same
+                // helper, so the row's count is the count that gets stored.
+                mergedUrlList = mergeUrlBackgroundList(store.urlBackgroundList, config.urlBackgroundList);
                 store.handleSetUrlBackgroundList(mergedUrlList);
             }
             // Validate that the imported selectedId still exists in the final list

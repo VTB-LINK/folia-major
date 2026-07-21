@@ -17,8 +17,10 @@ const unpinned: ThemePreferenceSwitchState = {
     songThemeAutoGenerateEnabled: false,
 };
 
+// Custom is the active mode unless a test says otherwise, so the activate row stays out of the way
+// of the cases that are about the theme sides themselves.
 const plan = (incoming: Record<string, unknown>, current: Record<string, unknown> = {}, switches = pinned) =>
-    buildImportPlan({ incoming, current, switches });
+    buildImportPlan({ incoming, current, switches, isCustomThemeActive: true });
 
 const keys = (p: ReturnType<typeof plan>) => p.changes.map(c => c.key);
 
@@ -130,6 +132,7 @@ describe('buildImportPlan', () => {
             from: true,
             to: false,
             derived: true,
+            causedBy: ['lyricsCustomFontFamily'],
         });
     });
 
@@ -217,6 +220,70 @@ describe('buildImportPlan', () => {
         expect(p.unchanged.map(c => c.key)).toEqual(['themeLight', 'themeDark']);
     });
 
+    // saveCustomDualTheme overwrites both sides with this machine's stored intensity, so comparing it
+    // would report a difference the save discards -- and report it again on every re-import.
+    it('does not compare animation intensity', () => {
+        const base = { backgroundColor: '#000', primaryColor: '#fff', accentColor: '#ea580c', secondaryColor: '#888' };
+        const p = plan(
+            { theme: { light: { ...base, animationIntensity: 'chaotic' }, dark: { ...base, animationIntensity: 'chaotic' } } },
+            { theme: { light: { ...base, animationIntensity: 'calm' }, dark: { ...base, animationIntensity: 'calm' } } },
+            unpinned,
+        );
+        expect(p.changes).toEqual([]);
+        expect(p.unchanged.map(c => c.key)).toEqual(['themeLight', 'themeDark']);
+    });
+
+    // Saving a theme and showing it are separate steps: a config whose theme already matches the
+    // saved one has no side to pick, so without this row there would be no way to switch to it.
+    describe('activating the custom theme', () => {
+        const side = { backgroundColor: '#000', primaryColor: '#fff', accentColor: '#ea580c', secondaryColor: '#888' };
+        const build = (isCustomThemeActive: boolean) => buildImportPlan({
+            incoming: { theme: { light: side, dark: side } },
+            current: { theme: { light: side, dark: side } },
+            switches: unpinned,
+            isCustomThemeActive,
+        });
+
+        it('is offered when an identical theme arrives while another mode is on screen', () => {
+            const p = build(false);
+            expect(keys(p)).toEqual(['activateCustomTheme']);
+            expect(p.unchanged.map(c => c.key)).toEqual(['themeLight', 'themeDark']);
+        });
+
+        it('is not offered when the custom theme is already the active mode', () => {
+            expect(keys(build(true))).toEqual([]);
+        });
+
+        it('is not offered when the config carries no theme at all', () => {
+            const p = buildImportPlan({ incoming: { visualizerMode: 'monet' }, current: {}, switches: unpinned });
+            expect(keys(p)).toEqual(['visualizerMode']);
+        });
+
+        // saveCustomDualTheme sets the mode to custom as part of saving, so a side cannot be taken
+        // without switching. The rows move together rather than offering an impossible combination.
+        it('links a picked side to activating, since saving is what switches the mode', () => {
+            const p = buildImportPlan({
+                incoming: { theme: { light: { ...side, accentColor: '#0df1fe' }, dark: side } },
+                current: { theme: { light: side, dark: side } },
+                switches: unpinned,
+                isCustomThemeActive: false,
+            });
+            expect(keys(p)).toEqual(['themeLight', 'activateCustomTheme']);
+            expect(p.changes.find(c => c.key === 'themeLight')?.forces).toEqual(['activateCustomTheme']);
+        });
+
+        it('does not link when custom is already active and there is no activate row', () => {
+            const p = buildImportPlan({
+                incoming: { theme: { light: { ...side, accentColor: '#0df1fe' }, dark: side } },
+                current: { theme: { light: side, dark: side } },
+                switches: unpinned,
+                isCustomThemeActive: true,
+            });
+            expect(keys(p)).toEqual(['themeLight']);
+            expect(p.changes.find(c => c.key === 'themeLight')?.forces).toBeUndefined();
+        });
+    });
+
     it('still reports a theme side whose colours differ', () => {
         const base = { backgroundColor: '#000', primaryColor: '#fff', accentColor: '#ea580c', secondaryColor: '#888', fontStyle: 'sans', animationIntensity: 'normal' };
         const p = plan(
@@ -239,6 +306,29 @@ describe('buildImportPlan', () => {
             { group: 'background', key: 'backgroundBlurPx', from: 6, to: 24 },
             { group: 'background', key: 'backgroundSaturation', from: 1.05, to: 0 },
         ]);
+    });
+
+    // isSameValue is JSON.stringify-based and so key-order sensitive, but the codec rebuilds an
+    // incoming tuning in its own field order. Judging by the leaves keeps a reordered-but-identical
+    // tuning out of the plan instead of showing a row that opens to nothing.
+    it('does not report a settings object whose leaves all match', () => {
+        const p = plan(
+            { dioramaTuning: { motionAmount: 1, cameraSpeed: 2 } },
+            { dioramaTuning: { cameraSpeed: 2, motionAmount: 1 } },
+            unpinned,
+        );
+        expect(p.changes).toEqual([]);
+        expect(p.unchanged.map(c => c.key)).toEqual(['dioramaTuning']);
+    });
+
+    // The setters take a patch, so keys the incoming object omits are left alone.
+    it('does not report a partial settings object that repeats current values', () => {
+        const p = plan(
+            { dioramaTuning: { cameraSpeed: 2 } },
+            { dioramaTuning: { cameraSpeed: 2, motionAmount: 1, extra: 'x' } },
+            unpinned,
+        );
+        expect(p.changes).toEqual([]);
     });
 
     it('reaches leaves nested inside a settings object', () => {
@@ -274,5 +364,192 @@ describe('buildImportPlan', () => {
         });
         expect(p.changes).toEqual([]);
         expect(p.unchanged[0]?.note).toBeUndefined();
+    });
+
+    // The import applies these only when the incoming value is truthy, so a null means "the exporter
+    // had none", not "clear yours". Offering one would promise a change the apply path skips.
+    it('skips a field the import would not apply because the incoming value is null', () => {
+        const p = plan(
+            { lyricsCustomFontFamily: null, visualizerMode: null, subtitleFontFamily: null },
+            { lyricsCustomFontFamily: 'Georgia', visualizerMode: 'monet', subtitleFontFamily: 'Georgia' },
+            unpinned,
+        );
+        // subtitleFontFamily has no truthiness guard on apply, so clearing it is real and offered.
+        expect(keys(p)).toEqual(['subtitleFontFamily']);
+    });
+
+    describe('webpage backgrounds', () => {
+        const a = { id: 'a', url: 'https://a.example/', note: 'a' };
+        const b = { id: 'b', url: 'https://b.example/', note: 'b' };
+
+        // The apply path merges by id. Diffing against the incoming array would count items that
+        // never appear -- "2 -> 1" while three end up stored.
+        it('diffs against the merged list rather than the incoming one', () => {
+            const p = plan({ urlBackgroundList: [b] }, { urlBackgroundList: [a] }, unpinned);
+            const change = p.changes.find(c => c.key === 'urlBackgroundList');
+            expect(change?.to).toEqual([a, b]);
+            expect(change?.note).toBe('listMerged');
+        });
+
+        it('reports no change when the incoming entries are all already present', () => {
+            const p = plan({ urlBackgroundList: [a] }, { urlBackgroundList: [a] }, unpinned);
+            expect(keys(p)).toEqual([]);
+            expect(p.unchanged.map(c => c.key)).toEqual(['urlBackgroundList']);
+        });
+
+        // An empty incoming list cannot clear anything, so it must not be offered as if it could.
+        it('reports no change for an empty incoming list', () => {
+            const p = plan({ urlBackgroundList: [] }, { urlBackgroundList: [a] }, unpinned);
+            expect(keys(p)).toEqual([]);
+        });
+
+        // Entries without an id or with a non-http url are dropped on the way in.
+        it('does not count entries the sanitizer discards', () => {
+            const p = plan({ urlBackgroundList: [{ id: '', url: 'https://x.example/' }, { id: 'c', url: 'ftp://nope/' }] }, { urlBackgroundList: [a] }, unpinned);
+            expect(keys(p)).toEqual([]);
+        });
+
+        // Applying a selection that is not in the merged list is skipped.
+        it('offers the selected id only when it survives the merge', () => {
+            expect(keys(plan({ urlBackgroundList: [b], urlBackgroundSelectedId: 'b' }, { urlBackgroundList: [a] }, unpinned)))
+                .toEqual(['urlBackgroundList', 'urlBackgroundSelectedId']);
+            expect(keys(plan({ urlBackgroundSelectedId: 'gone' }, { urlBackgroundList: [a] }, unpinned)))
+                .toEqual([]);
+        });
+
+        // The apply path only merges when the list row was taken, so an id that only the merge
+        // introduces has to bring the list with it or the write is silently skipped.
+        it('links a selected id that only the merge introduces to the list row', () => {
+            const p = plan({ urlBackgroundList: [b], urlBackgroundSelectedId: 'b' }, { urlBackgroundList: [a] }, unpinned);
+            expect(p.changes.find(c => c.key === 'urlBackgroundSelectedId')?.forces).toEqual(['urlBackgroundList']);
+        });
+
+        it('does not link an id the current list already has', () => {
+            const p = plan(
+                { urlBackgroundList: [b], urlBackgroundSelectedId: 'a' },
+                { urlBackgroundList: [a], urlBackgroundSelectedId: null },
+                unpinned,
+            );
+            expect(p.changes.find(c => c.key === 'urlBackgroundSelectedId')?.forces).toBeUndefined();
+        });
+    });
+
+    // Some setters overwrite a leaf no matter what arrives. Offering one promises a change that
+    // cannot land, and the value never converges, so a re-import reports it forever.
+    describe('leaves the setters pin', () => {
+        it('drops cadenza beamIntensity, which the setter always writes as 0', () => {
+            expect(keys(plan({ cadenzaTuning: { beamIntensity: 0.8, fontScale: 1 } }, { cadenzaTuning: { beamIntensity: 0, fontScale: 1 } }, unpinned)))
+                .toEqual([]);
+            // Bundled paths carry the renderer in the key, and must be dropped the same way.
+            expect(keys(plan({ visualizerTunings: { cadenza: { beamIntensity: 0.8 } } }, { visualizerTunings: { cadenza: { beamIntensity: 0 } } }, unpinned)))
+                .toEqual([]);
+        });
+
+        it('drops a custom cappella emoji source when this machine has no pack', () => {
+            const incoming = { cappellaTuning: { emojiPackSource: 'custom', showEmoMessages: true } };
+            const current = { cappellaTuning: { emojiPackSource: 'builtin', showEmoMessages: true } };
+            expect(keys(plan(incoming, current, unpinned))).toEqual([]);
+
+            const withPack = buildImportPlan({ incoming, current, switches: unpinned, assets: { hasCappellaEmojiPack: true } });
+            expect(keys(withPack)).toEqual(['cappellaTuning']);
+        });
+
+        // Not clamped by their setters -- useAppPreferences reverts each on the next tick when the
+        // image it names is not stored here, so the write lands and is then undone.
+        it('drops an uploaded monet background source when this machine has no image', () => {
+            const incoming = { monetBackgroundTuning: { backgroundSource: 'uploaded-global' } };
+            const current = { monetBackgroundTuning: { backgroundSource: 'cover-derived' } };
+            expect(keys(plan(incoming, current, unpinned))).toEqual([]);
+
+            const withImage = buildImportPlan({ incoming, current, switches: unpinned, assets: { hasMonetBackgroundImage: true } });
+            expect(keys(withImage)).toEqual(['monetBackgroundTuning']);
+        });
+
+        it('drops a custom monet portrait source when this machine has no image', () => {
+            const incoming = { monetTuning: { portraitSource: 'custom' } };
+            const current = { monetTuning: { portraitSource: 'cover' } };
+            expect(keys(plan(incoming, current, unpinned))).toEqual([]);
+
+            // The bundle carries the same leaf under the renderer's name.
+            expect(keys(plan(
+                { visualizerTunings: { monet: { portraitSource: 'custom' } } },
+                { visualizerTunings: { monet: { portraitSource: 'cover' } } },
+                unpinned,
+            ))).toEqual([]);
+
+            const withImage = buildImportPlan({ incoming, current, switches: unpinned, assets: { hasMonetPortraitImage: true } });
+            expect(keys(withImage)).toEqual(['monetTuning']);
+        });
+
+        // Going back to a source that needs nothing local always applies.
+        it('keeps a switch back to a cover-derived source', () => {
+            expect(keys(plan(
+                { monetBackgroundTuning: { backgroundSource: 'cover-derived' } },
+                { monetBackgroundTuning: { backgroundSource: 'uploaded-global' } },
+                unpinned,
+            ))).toEqual(['monetBackgroundTuning']);
+        });
+
+        // Going back to builtin is always applied, so it stays on offer.
+        it('keeps a switch back to the builtin emoji source', () => {
+            const p = plan(
+                { cappellaTuning: { emojiPackSource: 'builtin' } },
+                { cappellaTuning: { emojiPackSource: 'custom' } },
+                unpinned,
+            );
+            expect(keys(p)).toEqual(['cappellaTuning']);
+        });
+
+        it('leaves other leaves of the same tuning alone', () => {
+            const p = plan(
+                { cadenzaTuning: { beamIntensity: 0.8, fontScale: 2 } },
+                { cadenzaTuning: { beamIntensity: 0, fontScale: 1 } },
+                unpinned,
+            );
+            expect(p.changes.find(c => c.key === 'cadenzaTuning')?.children)
+                .toEqual([{ group: 'visualizer', key: 'fontScale', from: 1, to: 2 }]);
+        });
+    });
+
+    // resolveSongThemeAutoGenerateChange(_, true) also turns auto-switch on, and
+    // resolveSongThemeAutoSwitchChange(_, false) also turns auto-generate off, so declining one of
+    // the pair while accepting the other cannot hold.
+    describe('linking the song-theme switches', () => {
+        const find = (p: ReturnType<typeof plan>, key: string) => p.changes.find(c => c.key === key);
+
+        it('links auto-generate to auto-switch when both are turning on', () => {
+            const p = plan(
+                { songThemeAutoSwitchEnabled: true, songThemeAutoGenerateEnabled: true },
+                { songThemeAutoSwitchEnabled: false, songThemeAutoGenerateEnabled: false },
+                pinned,
+            );
+            expect(find(p, 'songThemeAutoGenerateEnabled')?.forces).toEqual(['songThemeAutoSwitchEnabled']);
+            expect(find(p, 'songThemeAutoSwitchEnabled')?.forces).toBeUndefined();
+        });
+
+        it('links auto-switch to auto-generate when both are turning off', () => {
+            const p = plan(
+                { songThemeAutoSwitchEnabled: false, songThemeAutoGenerateEnabled: false },
+                { songThemeAutoSwitchEnabled: true, songThemeAutoGenerateEnabled: true },
+                { isCustomThemePreferred: false, songThemeAutoSwitchEnabled: true, songThemeAutoGenerateEnabled: true },
+            );
+            expect(find(p, 'songThemeAutoSwitchEnabled')?.forces).toEqual(['songThemeAutoGenerateEnabled']);
+        });
+
+        it('leaves a lone switch unlinked', () => {
+            const p = plan({ songThemeAutoSwitchEnabled: true }, { songThemeAutoSwitchEnabled: false }, pinned);
+            expect(find(p, 'songThemeAutoSwitchEnabled')?.forces).toBeUndefined();
+        });
+    });
+
+    // A derived row is only real while the row that causes it is still accepted.
+    it('names what causes an unpin so declining it can retract the warning', () => {
+        const p = plan(
+            { songThemeAutoSwitchEnabled: true },
+            { songThemeAutoSwitchEnabled: false },
+            pinned,
+        );
+        expect(p.changes.find(c => c.key === 'isCustomThemePreferred'))
+            .toMatchObject({ derived: true, causedBy: ['songThemeAutoSwitchEnabled'] });
     });
 });
