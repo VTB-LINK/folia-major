@@ -12,6 +12,8 @@ interface ObsCopyUrlButtonProps {
     disabled?: boolean;
     // Padding/sizing for the primary button so it fits its surrounding context (header vs button row).
     buttonClassName?: string;
+    // Layout for the pair as a whole. Inline by default; the controls panel stretches it to the row.
+    containerClassName?: string;
 }
 
 // Rough menu height used to decide the open direction (3 single-line rows + padding).
@@ -21,7 +23,9 @@ const MENU_ESTIMATED_HEIGHT = 150;
 // theme mode (static / builtin / ai). The dropdown is a pure selector — it only sets the mode; copying
 // is the primary button's job. Each mode's behavior shows on hover (title). Open direction is detected
 // from the live space below the trigger, so it stays correct even if the surrounding layout changes.
-export const ObsCopyUrlButton: React.FC<ObsCopyUrlButtonProps> = ({ onCopy, copied, disabled, buttonClassName }) => {
+export const ObsCopyUrlButton: React.FC<ObsCopyUrlButtonProps> = ({
+    onCopy, copied, disabled, buttonClassName, containerClassName,
+}) => {
     const { t } = useTranslation();
     const mode = useSettingsUiStore((s) => s.webObsThemeMode);
     const setMode = useSettingsUiStore((s) => s.setWebObsThemeMode);
@@ -72,13 +76,13 @@ export const ObsCopyUrlButton: React.FC<ObsCopyUrlButtonProps> = ({ onCopy, copi
     const menuBorder = isDaylight ? 'rgba(24, 24, 27, 0.12)' : 'rgba(255, 255, 255, 0.12)';
 
     return (
-        <div ref={containerRef} className="relative inline-flex items-stretch">
+        <div ref={containerRef} className={`relative items-stretch ${containerClassName ?? 'inline-flex'}`}>
             <button
                 type="button"
                 onClick={() => void onCopy()}
                 disabled={disabled}
                 title={`${current.label} — ${current.hint}`}
-                className={`${baseBtn} rounded-l-lg ${buttonClassName ?? 'px-3 py-2'}`}
+                className={`${baseBtn} rounded-l-lg justify-center ${buttonClassName ?? 'px-3 py-2'}`}
                 style={{ color: copied ? '#86efac' : 'var(--text-primary)' }}
             >
                 {copied ? <Check size={13} /> : <Copy size={13} />}

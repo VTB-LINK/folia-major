@@ -11,6 +11,10 @@ import { resolveVisualizerBackgroundMode, useSettingsUiStore } from '../../store
 import { syncNow } from '../../services/sync/syncCoordinator';
 import { isSyncConfigured } from '../../services/sync/syncConfig';
 import QuickEffectPicker from './QuickEffectPicker';
+import { ObsCopyUrlButton } from '../shared/ObsCopyUrlButton';
+import { buildCurrentObsUrl } from '../../utils/currentObsUrl';
+import { resolveWebObsTarget, selectWebObsSource } from '../../utils/webObsTarget';
+import { hasCustomObsFont } from '../../utils/visualSettingsConfig';
 
 // Controls tab composes compact visualizer and background pickers without changing player state flow.
 
@@ -44,6 +48,35 @@ interface ControlsTabProps {
     loopToggleDisabled?: boolean;
     onClosePanel?: () => void;
 }
+
+// FORK-ONLY. A compact label + switch row, borrowing the settings modal's switch but sized to this
+// panel's own type scale. Module scope so toggling one row does not remount the other.
+const QuickToggleRow: React.FC<{
+    label: string;
+    hint: string;
+    on: boolean;
+    accent?: string;
+    offClass: string;
+    onToggle: () => void;
+}> = ({ label, hint, on, accent, offClass, onToggle }) => (
+    <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest truncate" title={hint}>
+            {label}
+        </span>
+        <button
+            type="button"
+            onClick={onToggle}
+            role="switch"
+            aria-checked={on}
+            aria-label={label}
+            title={hint}
+            className={`w-9 h-5 shrink-0 rounded-full p-0.5 transition-colors ${on ? '' : offClass}`}
+            style={{ backgroundColor: on ? (accent || 'rgba(114, 119, 134, 1)') : undefined }}
+        >
+            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-4' : 'translate-x-0'}`} />
+        </button>
+    </div>
+);
 
 const ControlsTab: React.FC<ControlsTabProps> = ({
     loopMode,
@@ -79,6 +112,43 @@ const ControlsTab: React.FC<ControlsTabProps> = ({
     const openThemeQuickEditor = useThemeQuickEditorStore(state => state.openEditor);
     const openSettings = useSettingsUiStore(state => state.openSettings);
     const statusSetter = useSettingsUiStore(state => state.statusSetter);
+    // FORK-ONLY. Upstream declined this button on review (the panel is for quick visual tweaks and
+    // copying an OBS URL is a low-frequency action that belongs in settings). Kept here because the
+    // fork's own use is the opposite: the link is re-copied whenever the look changes, and this
+    // panel is where the look changes. Same builder and same mode as the settings button, so all
+    // three copy points produce an identical link.
+    //
+    // Same reasoning for these two: both are toggled per stream segment rather than configured once,
+    // and the panel is already open whenever they need changing.
+    const transparentPlayerBackground = useSettingsUiStore(state => state.transparentPlayerBackground);
+    const toggleTransparentPlayerBackground = useSettingsUiStore(state => state.handleToggleTransparentPlayerBackground);
+    const autoHidePlayerChrome = useSettingsUiStore(state => state.autoHidePlayerChrome);
+    // usePlayerChromeAutoHide watches this value, so flipping the preference here also moves the
+    // live visibility mode -- no separate call needed.
+    const toggleAutoHidePlayerChrome = useSettingsUiStore(state => state.handleToggleAutoHidePlayerChrome);
+
+    // OBS static URL is a web-deploy concept, so this copy button is web-only.
+    const isElectron = typeof window !== 'undefined' && Boolean((window as { electron?: unknown }).electron);
+    const webObsSource = useSettingsUiStore(selectWebObsSource);
+    const [obsUrlCopied, setObsUrlCopied] = useState(false);
+    const handleCopyObsUrl = async () => {
+        const target = resolveWebObsTarget();
+        if (!target) return;
+        const url = await buildCurrentObsUrl(target.source, target.host, target.extra);
+        try {
+            await navigator.clipboard.writeText(url);
+            setObsUrlCopied(true);
+            window.setTimeout(() => setObsUrlCopied(false), 1600);
+            statusSetter?.(hasCustomObsFont()
+                ? { type: 'info', text: t('options.obsUrlCustomFontHint') }
+                : { type: 'success', text: t('status.copied') });
+        } catch (err) {
+            // The URL is built asynchronously, so a browser that requires the write to stay inside
+            // the click's own task can reject here. Say so instead of leaving the button inert.
+            console.error('Failed to copy OBS URL:', err);
+            statusSetter?.({ type: 'error', text: t('status.copyFailed') });
+        }
+    };
     const visualizerBackgroundMode = useSettingsUiStore(state => state.visualizerBackgroundMode);
     const monetBackgroundTuning = useSettingsUiStore(state => state.monetBackgroundTuning);
     const setMonetBackgroundTuning = useSettingsUiStore(state => state.handleSetMonetBackgroundTuning);
@@ -137,6 +207,7 @@ const ControlsTab: React.FC<ControlsTabProps> = ({
 
     const loopButtonBg = isDaylight ? 'bg-black/5 hover:bg-zinc-300/85' : 'bg-white/5 hover:bg-white/10';
     const buttonBg = isDaylight ? 'bg-black/5 hover:bg-black/10' : 'bg-white/5 hover:bg-white/10';
+    const toggleOffClass = isDaylight ? 'bg-black/10' : 'bg-white/10';
     const wellBg = isDaylight ? 'bg-black/5' : 'bg-black/20';
     const activeOptionBg = isDaylight ? 'bg-white shadow-sm hover:bg-white/90' : 'bg-white/20 shadow-sm hover:bg-white/30';
 
@@ -514,6 +585,36 @@ const ControlsTab: React.FC<ControlsTabProps> = ({
                     </div>
                 </div>
 
+                <div className="pt-2 border-t border-white/5 space-y-2">
+                    <QuickToggleRow
+                        label={t('options.transparentPlayerBackground')}
+                        hint={t('options.transparentPlayerBackgroundDesc')}
+                        on={transparentPlayerBackground}
+                        accent={theme.secondaryColor}
+                        offClass={toggleOffClass}
+                        onToggle={() => toggleTransparentPlayerBackground(!transparentPlayerBackground)}
+                    />
+                    <QuickToggleRow
+                        label={t('options.autoHidePlayerChrome')}
+                        hint={t('options.autoHidePlayerChromeDesc')}
+                        on={autoHidePlayerChrome}
+                        accent={theme.secondaryColor}
+                        offClass={toggleOffClass}
+                        onToggle={() => toggleAutoHidePlayerChrome(!autoHidePlayerChrome)}
+                    />
+                </div>
+
+                {!isElectron && (
+                    <div className="pt-2 border-t border-white/5">
+                        <ObsCopyUrlButton
+                            onCopy={handleCopyObsUrl}
+                            copied={obsUrlCopied}
+                            disabled={webObsSource === null}
+                            containerClassName="flex w-full"
+                            buttonClassName="flex-1 py-2"
+                        />
+                    </div>
+                )}
             </div>
 
         </motion.div>
