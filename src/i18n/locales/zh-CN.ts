@@ -29,6 +29,8 @@ export default {
     "geometricBgShown": "通用几何背景已显示",
     "minimizeToTray": "最小化将隐藏到托盘",
     "minimizeToTaskbar": "最小化将保留在任务栏",
+    "voiceInputPauseOn": "语音输入时暂停已开启",
+    "voiceInputPauseOff": "语音输入时暂停已关闭",
     "taskbarHidden": "主窗口任务栏图标已隐藏",
     "taskbarRestored": "主窗口任务栏图标已恢复",
     "openPlayerOnLaunch": "启动后将直接进入播放页",
@@ -63,6 +65,10 @@ export default {
     "langManual": "界面语言已切换为 {{language}}",
     "panelCloseBtnShown": "已显示面板关闭按钮",
     "panelCloseBtnHidden": "已隐藏面板关闭按钮",
+    "playerBackButtonAlwaysShown": "播放页左上角返回按钮将始终显示",
+    "playerBackButtonAutoHidden": "播放页左上角返回按钮将悬停显示",
+    "mainWindowTitlebarAlwaysShown": "主窗口标题栏控制按钮将始终显示",
+    "mainWindowTitlebarAutoHidden": "主窗口标题栏控制按钮将悬停显示",
     "stageModeOn": "舞台模式已启用",
     "stageModeOff": "舞台模式已关闭",
     "queueInsertNext": "加入队列将插到下一首",
@@ -221,6 +227,7 @@ export default {
       "settings-r2-sync": { "title": "同步服务设置", "description": "打开同步服务设置" },
       "sync-now": { "title": "立即同步", "description": "同步 AI 主题" },
       "settings-desktop": { "title": "桌面端设置", "description": "打开桌面应用设置" },
+      "desktop-toggle-voice-input-pause": { "title": "语音输入时暂停", "description": "切换语音输入时自动暂停播放" },
       "settings-lab": { "title": "实验设置", "description": "打开实验功能设置" },
       "visualizer-toggle-random-per-song": { "title": "每首歌随机歌词动画", "description": "歌曲切换时随机使用一种歌词动画模式" },
       "settings-visualizer": { "title": "可视化设置", "description": "打开歌词动画实验台" },
@@ -273,6 +280,8 @@ export default {
       "background-sora": { "title": "背景切换：空", "description": "将背景切换到星空 (Sora)" },
       "settings-toggle-transparent": { "title": "透明化", "description": "切换播放器背景透明度" },
       "settings-toggle-daylight": { "title": "切换明暗", "description": "切换主题日夜模式" },
+      "settings-toggle-player-back-button": { "title": "始终显示播放页返回按钮", "description": "切换播放页左上角返回按钮的常驻显示" },
+      "settings-toggle-main-window-titlebar": { "title": "始终显示标题栏控制按钮", "description": "切换主窗口标题栏控制按钮的常驻显示" },
       "settings-toggle-bottom-subtitle-overlay": { "title": "切换底部字幕层", "description": "显示或隐藏整个底部字幕层" },
       "settings-toggle-subtitle-translation": { "title": "切换字幕翻译", "description": "显示或隐藏歌词动画中的翻译文本" },
       "settings-toggle-subtitle-background": { "title": "切换字幕背景", "description": "显示或隐藏提升字幕可读性的背景" },
@@ -566,6 +575,14 @@ export default {
     "enableUpdateCheckDesc": "启动时检查是否有新版本发布。",
     "enableAutoUpdate": "启用自动更新",
     "enableAutoUpdateDesc": "发现新版本后自动下载更新。",
+      "updateChannel": "更新通道",
+      "updateChannelDesc": "选择此桌面端应用跟随的发布通道。",
+      "updateChannelRealeco": "Realeco · 正式版",
+      "updateChannelLimo": "Limo · Nightly",
+      "updateChannelCielo": "Cielo · Canary",
+      "updateChannelInternal": "内部构建",
+      "updateUnsupportedSystem": "当前系统不支持自动更新。",
+    "updateUnsupportedChannel": "此内部构建不支持自动更新。",
     "autoUpdateGithubNotice": "自动更新需要能够访问 GitHub；网络不稳定时可能无法下载更新。",
     "openReleasePage": "打开发布页",
     "downloadChina": "国内下载",
@@ -577,6 +594,12 @@ export default {
     "enableStaticModeDescSub": "不会影响歌词文本效果或渲染。",
     "labSettings": "实验室",
     "labSettingsDesc": "高级自定义功能",
+    "labPerformanceSection": "性能与背景",
+    "labPerformanceSectionDesc": "调整动画开销和主页背景表现。",
+    "labPlayerUiSection": "播放页界面",
+    "labPlayerUiSectionDesc": "调整播放页上的可见元素和快捷入口。",
+    "labWindowAndToolsSection": "窗口与工具",
+    "labWindowAndToolsSectionDesc": "调整桌面窗口行为与高级工具。",
     "disableHomeDynamicBackground": "关闭主页动态背景",
     "disableHomeDynamicBackgroundDesc": "关闭后主页不再继续播放背景动画，可降低 GPU 占用。",
     "disableHomeDynamicBackgroundWarning": "默认情况下允许动态背景。",
@@ -588,6 +611,10 @@ export default {
     "lyricMatchPriorityDesc": "在多个歌词源都存在匹配度满足要求的歌词时，优先选择该歌词源的结果。",
     "labHidePlayerUi": "隐藏播放页 UI",
     "labHidePlayerUiDesc": "仅对播放页生效。可分别隐藏底部控制条、底部字幕和右侧按钮；隐藏右侧按钮后仍可使用 P 键打开或关闭右侧面板。",
+    "alwaysShowPlayerBackButton": "始终显示播放页左上角返回按钮",
+    "alwaysShowPlayerBackButtonDesc": "让播放页左上角的返回按钮保持显示。",
+    "alwaysShowMainWindowTitlebar": "始终显示标题栏控制按钮",
+    "alwaysShowMainWindowTitlebarDesc": "让最小化、最大化和关闭按钮保持显示，不显示整条标题栏。",
     "hidePlayerProgressBar": "隐藏底部控制条",
     "hidePlayerTranslationSubtitle": "隐藏底部字幕层",
     "hidePlayerTranslationSubtitleDesc": "不影响使用独立字幕的动画模式。",
@@ -596,6 +623,10 @@ export default {
     "transparentPlayerBackgroundDesc": "仅对播放页生效。开启后会切换到透明窗口模式，适合 OBS 浏览器源或抠像叠加场景。",
     "enablePlayerPageNativeBlur": "开启播放页原生毛玻璃背景",
     "enablePlayerPageNativeBlurDesc": "开启后，播放页的主题、图片、Monet 等背景将不再显示，并由系统原生毛玻璃替代。仅在非透明模式和桌面端生效；系统原生效果会消耗更多性能，并可能在移动窗口时产生卡顿。",
+    "nativeBlurConfirmTitle": "系统毛玻璃效果",
+    "nativeBlurConfirmDesc": "开启后，窗口会变为系统毛玻璃效果的半透明背景，Folia 的各种背景将不再显示。如果系统不支持，则会显示为白色不透明背景。",
+    "nativeBlurConfirmAction": "我明白，这会让背景调整无效",
+    "nativeBlurBackgroundNotice": "当前已开启原生毛玻璃背景，背景设置无效",
     "autoHidePlayerChrome": "自动隐藏控制栏",
     "autoHidePlayerChromeDesc": "开启后，自动隐藏播放页的进度条和右侧按钮。",
     "disableVisualizerVignette": "禁用暗角",
@@ -610,6 +641,9 @@ export default {
     "hideRemoteControlTaskbarIcon": "隐藏 Remote Control 任务栏图标",
     "hideRemoteControlTaskbarIconDesc": "Remote Control 窗口打开时不在系统任务栏显示图标。",
     "openPlayerOnLaunch": "启动后直接进入播放页",
+    "voiceInputSettings": "语音输入",
+    "voiceInputPause": "语音输入时暂停播放",
+    "voiceInputPauseDesc": "检测到系统语音输入（如 Win+H 语音键入、输入法语音转文字）或其他应用占用麦克风时自动暂停播放，结束后自动恢复。仅 Windows 桌面端生效。",
     "showOpenPanelCloseButton": "显示信息卡片关闭按钮",
     "showOpenPanelCloseButtonDesc": "歌曲信息卡片打开后，显示右下角浮动关闭按钮。",
     "showOpenPanelCloseButtonDescSub": "移动端可能仍然更需要这个按钮。",
@@ -1143,6 +1177,25 @@ export default {
       "dioramaRework": {
         "title": "镜台点云重构",
         "description": "镜台加入涟漪驱动的点云与长廊双模式、更多粒子形态、关键字着色和可调的粒子密度与辉光。"
+      }
+    },
+    "v0_6_1": {
+      "intro": "以下是 0.6.1 版本的新功能与改进",
+      "settingsRework": {
+        "title": "设置页面重构",
+        "description": "全新重构的设置页面，结构更清晰、分类更合理，提供更舒适易用的配置体验。"
+      },
+      "autoHideChrome": {
+        "title": "界面元素自动隐藏",
+        "description": "可自由调整是否在静止时自动隐藏顶部标题栏与播放页返回按键。"
+      },
+      "voiceInputPause": {
+        "title": "语音输入自动暂停",
+        "description": "Windows 环境下支持在触发系统语音输入时自动暂停播放，可在实验室设置中开启。"
+      },
+      "obsStaticLink": {
+        "title": "OBS 静态链接分享",
+        "description": "Web 版本支持导出与分享 OBS 静态串流链接，方便推流工具直接引用。"
       }
     }
   },

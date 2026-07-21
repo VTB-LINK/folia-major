@@ -6,6 +6,7 @@ declare global {
   const __GIT_BRANCH__: string;
   const __APP_VERSION__: string;
   const __APP_VERSION_LABEL__: string;
+  const __APP_RELEASE_CHANNEL__: string;
 
   interface ElectronCacheDirectoryResult {
     path: string;
@@ -140,6 +141,12 @@ declare global {
     discordPresenceEnabled: boolean;
   }
 
+  interface ElectronVoiceInputPauseStatus {
+    active: boolean;
+    enabled: boolean;
+    supported: boolean;
+  }
+
   interface ElectronDiscordPresenceSnapshot {
     hasTrack: boolean;
     title: string | null;
@@ -185,6 +192,7 @@ declare global {
     status: ElectronUpdateStatusValue;
     supported: boolean;
     updateCheckSupported: boolean;
+    updateCheckSupportReason?: 'system' | 'channel' | null;
     updateCheckEnabled: boolean;
     autoUpdateEnabled: boolean;
     currentVersion: string;
@@ -508,6 +516,8 @@ declare global {
       getDiscordPresenceStatus: () => Promise<ElectronDiscordPresenceStatus>;
       publishDiscordPresenceSnapshot: (snapshot: ElectronDiscordPresenceSnapshot) => Promise<ElectronDiscordPresenceStatus>;
       getPlaybackSyncBridgeStatus: () => Promise<ElectronPlaybackSyncBridgeStatus>;
+      getVoiceInputPauseStatus: () => Promise<ElectronVoiceInputPauseStatus>;
+      onVoiceInputStateChanged: (callback: (state: ElectronVoiceInputPauseStatus) => void) => () => void;
       onPlaybackSyncBridgeStatusChanged: (callback: (status: ElectronPlaybackSyncBridgeStatus) => void) => () => void;
       onDiscordPresenceStatusChanged: (callback: (status: ElectronDiscordPresenceStatus) => void) => () => void;
       onObsBrowserSourceStatusChanged: (callback: (status: ElectronObsBrowserSourceStatus) => void) => () => void;

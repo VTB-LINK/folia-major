@@ -281,6 +281,18 @@ export const COMMAND_PALETTE_COMMANDS: CommandPaletteCommand[] = [
         },
     },
     createSettingsCommand('settings-desktop', 'Desktop settings', 'Open desktop app settings', ['desktop', 'electron', '桌面', '桌面端', 'zhuomian', 'zhuomianduan', 'zm', 'zmd'], 'options', 'desktop'),
+    createSettingsCommand('settings-update-channel', 'Update channel', 'Choose the desktop app release channel', ['update channel', 'release channel', 'realeco', 'limo', 'cielo', '更新通道', '发布通道', 'gengxintongdao', 'fabutongdao', 'gxtd', 'fbtd'], 'options', 'desktop'),
+    {
+        id: 'desktop-toggle-voice-input-pause',
+        group: 'settings',
+        title: 'Voice input pause',
+        description: 'Toggle pausing playback while system voice input uses the microphone',
+        keywords: ['voice input', 'dictation', 'voice typing', 'microphone pause', '语音输入', '语音键入', '语音转文字', '麦克风', 'yuyinshuru', 'yuyinjianru', 'yuyinzhuanwenzi', 'maikefeng', 'yysr', 'yyjr', 'yyzw', 'mkf'],
+        execute: (_input, context) => {
+            context.toggleVoiceInputPause();
+            return true;
+        },
+    },
     createSettingsCommand('settings-lab', 'Lab settings', 'Open experimental settings', ['lab', 'experimental', '实验', '实验室', 'shiyan', 'shiyanshi', 'sy', 'sys'], 'options', 'lab'),
     createSettingsCommand('settings-visualizer', 'Visualizer settings', 'Open lyrics animation workbench', ['visualizer settings', 'visualizer workbench', '可视化', '歌词动画', 'keshihua', 'gecidonghua', 'ksh', 'gcdh', 'donghua'], 'options', 'visualizer'),
     createSettingsCommand('settings-theme-park', 'Color', 'Open theme editor', ['color', 'theme park', 'theme', '配色', '主题', '主题公园', 'peise', 'zhuti', 'zhutigongyuan', 'ps', 'zt', 'ztgy'], 'options', 'themePark'),
@@ -612,6 +624,28 @@ export const COMMAND_PALETTE_COMMANDS: CommandPaletteCommand[] = [
         },
     },
     {
+        id: 'settings-toggle-player-back-button',
+        group: 'settings',
+        title: 'Always show player back button',
+        description: 'Toggle whether the player page back button stays visible',
+        keywords: ['always show back button', 'player back button', 'back button', '返回按钮', '始终显示返回按钮', '播放页返回按钮', 'fanhui annniu', 'bofangye fanhui annniu', 'fh', 'bfyfh'],
+        execute: (_input, context) => {
+            context.toggleAlwaysShowPlayerBackButton();
+            return true;
+        },
+    },
+    {
+        id: 'settings-toggle-main-window-titlebar',
+        group: 'settings',
+        title: 'Always show window control buttons',
+        description: 'Toggle whether the main window control buttons stay visible',
+        keywords: ['always show window controls', 'window control buttons', 'always show titlebar', 'main window titlebar', 'titlebar', '标题栏', '控制按钮', '始终显示标题栏', '始终显示控制按钮', '主窗口标题栏', 'biaoti lan', 'zhuchuangkou biaoti lan', 'kongzhi annniu', 'bt', 'zckbt', 'kzan'],
+        execute: (_input, context) => {
+            context.toggleAlwaysShowMainWindowTitlebar();
+            return true;
+        },
+    },
+    {
         id: 'settings-toggle-bottom-subtitle-overlay',
         group: 'settings',
         title: 'Toggle bottom subtitle overlay',
@@ -715,7 +749,7 @@ export const COMMAND_PALETTE_COMMANDS: CommandPaletteCommand[] = [
 ];
 
 export const getAvailableCommandPaletteCommands = (context?: CommandPaletteContext) => COMMAND_PALETTE_COMMANDS.filter(command => {
-    if (command.id === 'settings-desktop' || command.id.startsWith('desktop-')) {
+    if (command.id === 'settings-desktop' || command.id === 'settings-update-channel' || command.id.startsWith('desktop-')) {
         const isWebBrowser = typeof window !== 'undefined';
         const isElectron = isWebBrowser && Boolean((window as any).electron);
         if (isWebBrowser && !isElectron) {
@@ -727,6 +761,13 @@ export const getAvailableCommandPaletteCommands = (context?: CommandPaletteConte
     if (command.id === 'home-playlist' || command.id === 'home-albums' || command.id === 'home-radio') {
         const isElectron = typeof window !== 'undefined' && Boolean((window as { electron?: unknown }).electron);
         if (!isElectron) {
+            return false;
+        }
+    }
+
+    if (command.id === 'desktop-toggle-voice-input-pause') {
+        const isElectron = typeof window !== 'undefined' && Boolean((window as any).electron);
+        if (!isElectron || !context?.voiceInputPauseSupported) {
             return false;
         }
     }

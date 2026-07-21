@@ -27,6 +27,8 @@ export default {
     "geometricBgShown": "Latar geometris umum ditampilkan",
     "minimizeToTray": "Minimalkan akan sembunyi di tray",
     "minimizeToTaskbar": "Minimalkan akan tetap di taskbar",
+    "voiceInputPauseOn": "Jeda saat input suara diaktifkan",
+    "voiceInputPauseOff": "Jeda saat input suara dinonaktifkan",
     "taskbarHidden": "Ikon jendela utama di taskbar disembunyikan",
     "taskbarRestored": "Ikon jendela utama di taskbar dipulihkan",
     "openPlayerOnLaunch": "Buka langsung ke halaman pemutar",
@@ -60,6 +62,10 @@ export default {
     "langManual": "Bahasa antarmuka diganti ke {{language}}",
     "panelCloseBtnShown": "Tombol tutup panel ditampilkan",
     "panelCloseBtnHidden": "Tombol tutup panel disembunyikan",
+    "playerBackButtonAlwaysShown": "Tombol kembali pemutar akan tetap terlihat",
+    "playerBackButtonAutoHidden": "Tombol kembali pemutar akan muncul saat diarahkan",
+    "mainWindowTitlebarAlwaysShown": "Tombol kontrol jendela utama akan tetap terlihat",
+    "mainWindowTitlebarAutoHidden": "Tombol kontrol jendela utama akan muncul saat diarahkan",
     "playerChromeAlwaysHidden": "UI akan tetap tersembunyi",
     "playerChromeAlwaysVisible": "UI akan tetap terlihat",
     "playerChromeAutoHide": "UI akan sembunyi otomatis",
@@ -216,6 +222,7 @@ export default {
       "settings-obs-browser-source": { "title": "Sumber browser OBS", "description": "Buka pengaturan sumber browser OBS" },
       "settings-storage": { "title": "Pengaturan penyimpanan", "description": "Buka pengaturan cache dan penyimpanan" },
       "settings-desktop": { "title": "Pengaturan desktop", "description": "Buka pengaturan aplikasi desktop" },
+      "desktop-toggle-voice-input-pause": { "title": "Jeda input suara", "description": "Alihkan jeda pemutaran saat input suara" },
       "settings-lab": { "title": "Pengaturan lab", "description": "Buka pengaturan eksperimental" },
       "settings-visualizer": { "title": "Pengaturan visualizer", "description": "Buka bengkel animasi lirik" },
       "settings-theme-park": { "title": "Warna", "description": "Buka editor tema" },
@@ -262,6 +269,8 @@ export default {
       "background-url": { "title": "Latar: Latar Tertanam", "description": "Alihkan latar ke mode halaman web tertanam" },
       "settings-toggle-transparent": { "title": "Alihkan transparansi", "description": "Alihkan latar belakang pemutar transparan" },
       "settings-toggle-daylight": { "title": "Alihkan terang/gelap", "description": "Alihkan mode siang/malam tema" },
+      "settings-toggle-player-back-button": { "title": "Selalu tampilkan tombol kembali pemutar", "description": "Alihkan apakah tombol kembali halaman pemutar tetap terlihat" },
+      "settings-toggle-main-window-titlebar": { "title": "Selalu tampilkan tombol kontrol jendela", "description": "Alihkan apakah tombol kontrol jendela utama tetap terlihat" },
       "settings-toggle-bottom-subtitle-overlay": { "title": "Alihkan overlay subtitle bawah", "description": "Tampilkan atau sembunyikan seluruh overlay subtitle bawah" },
       "settings-toggle-subtitle-translation": { "title": "Alihkan terjemahan subtitle", "description": "Tampilkan atau sembunyikan teks terjemahan di subtitle visualizer" },
       "settings-toggle-subtitle-background": { "title": "Alihkan latar subtitle", "description": "Tampilkan atau sembunyikan latar agar subtitle lebih mudah dibaca" },
@@ -520,6 +529,14 @@ export default {
     "enableUpdateCheckDesc": "Periksa rilis GitHub melalui proxy sistem saat aplikasi desktop dimulai.",
     "enableAutoUpdate": "Aktifkan Pembaruan Otomatis",
     "enableAutoUpdateDesc": "Unduh pembaruan otomatis setelah versi baru ditemukan.",
+      "updateChannel": "Saluran Pembaruan",
+      "updateChannelDesc": "Pilih jalur rilis yang diikuti aplikasi desktop ini.",
+      "updateChannelRealeco": "Realeco · Stabil",
+      "updateChannelLimo": "Limo · Nightly",
+      "updateChannelCielo": "Cielo · Canary",
+      "updateChannelInternal": "Internal",
+      "updateUnsupportedSystem": "Pembaruan otomatis tidak tersedia pada sistem saat ini.",
+    "updateUnsupportedChannel": "Pembaruan otomatis tidak tersedia untuk build internal ini.",
     "autoUpdateGithubNotice": "Pembaruan otomatis butuh akses ke GitHub; jika jaringan tidak stabil, aktifkan proxy sistem.",
     "openReleasePage": "Buka Halaman Rilis",
     "downloadChina": "Unduh CN",
@@ -531,6 +548,16 @@ export default {
     "enableStaticModeDescSub": "Tidak memengaruhi efek teks lirik atau rendering.",
     "labSettings": "Pengaturan Lab",
     "labSettingsDesc": "Buka halaman terpisah untuk pengaturan perilaku pemutaran dan panel eksperimental.",
+    "labPerformanceSection": "Performa & Latar Belakang",
+    "labPerformanceSectionDesc": "Kontrol beban animasi dan latar belakang beranda.",
+    "labPlayerUiSection": "Antarmuka Halaman Pemutar",
+    "labPlayerUiSectionDesc": "Kontrol visibilitas dan akses cepat di halaman pemutar.",
+    "labWindowAndToolsSection": "Jendela & Alat",
+    "labWindowAndToolsSectionDesc": "Perilaku jendela desktop dan utilitas lanjutan.",
+    "alwaysShowPlayerBackButton": "Selalu Tampilkan Tombol Kembali Pemutar",
+    "alwaysShowPlayerBackButtonDesc": "Pertahankan tombol kembali di kiri atas halaman pemutar tetap terlihat.",
+    "alwaysShowMainWindowTitlebar": "Selalu Tampilkan Tombol Kontrol Jendela",
+    "alwaysShowMainWindowTitlebarDesc": "Pertahankan tombol minimalkan, maksimalkan, dan tutup tetap terlihat tanpa menampilkan bilah judul.",
     "disableHomeDynamicBackground": "Nonaktifkan Latar Belakang Dinamis Beranda",
     "disableHomeDynamicBackgroundDesc": "Saat diaktifkan, halaman beranda menghentikan animasi latar belakang untuk mengurangi penggunaan GPU.",
     "disableHomeDynamicBackgroundWarning": "Secara default mati, jadi latar belakang dinamis tetap aktif kecuali Anda mengaktifkannya.",
@@ -550,6 +577,7 @@ export default {
     "transparentPlayerBackgroundDesc": "Hanya berlaku di halaman pemutar. Saat diaktifkan, Folia beralih ke mode jendela transparan untuk sumber browser OBS atau overlay chroma key.",
     "enablePlayerPageNativeBlur": "Aktifkan Blur Asli Halaman Pemutar",
     "enablePlayerPageNativeBlurDesc": "Saat diaktifkan, tema, gambar, Monet, dan latar belakang pemutar lainnya disembunyikan lalu diganti dengan blur asli sistem. Hanya berlaku dalam mode nontransparan di desktop; efek ini memakai lebih banyak sumber daya dan dapat tersendat saat jendela dipindahkan.",
+    "nativeBlurBackgroundNotice": "Blur asli sistem diaktifkan; pengaturan latar belakang animasi lirik saat ini tidak berlaku.",
     "autoHidePlayerChrome": "Sembunyikan kontrol pemutar otomatis",
     "autoHidePlayerChromeDesc": "Saat diaktifkan, bilah kemajuan pemutar dan tombol sisi kanan akan otomatis disembunyikan saat mouse meninggalkan jendela lebih dari 3 detik.",
     "disableVisualizerVignette": "Nonaktifkan vignette",
@@ -564,6 +592,9 @@ export default {
     "hideRemoteControlTaskbarIconDesc": "Sembunyikan jendela Remote Control dari taskbar saat terbuka.",
     "hideTaskbarIconDesc": "Sembunyikan aplikasi dari taskbar meski jendela utama masih terbuka. Ikon tray tetap menjadi cara utama untuk kembali ke aplikasi.",
     "openPlayerOnLaunch": "Buka pemutar saat diluncurkan",
+    "voiceInputSettings": "Input suara",
+    "voiceInputPause": "Jeda pemutaran saat input suara",
+    "voiceInputPauseDesc": "Jeda pemutaran secara otomatis saat input suara sistem (pengetikan suara Win+H, ucapan-ke-teks IME) atau aplikasi lain menggunakan mikrofon, lalu lanjutkan setelahnya. Hanya desktop Windows.",
     "showOpenPanelCloseButton": "Tampilkan tombol tutup panel",
     "showOpenPanelCloseButtonDesc": "Biarkan tombol tutup mengambang tetap terlihat setelah kartu info lagu dibuka.",
     "showOpenPanelCloseButtonDescSub": "Matikan ini untuk rekaman layar yang lebih bersih. Pengguna mobile mungkin tetap lebih suka mengaktifkannya.",
@@ -1061,6 +1092,25 @@ export default {
       "dioramaRework": {
         "title": "Pembaruan Partikel Diorama",
         "description": "Diorama kini memiliki mode awan titik dan koridor berbasis riak, lebih banyak bentuk partikel, pewarnaan kata kunci, serta kontrol kepadatan dan cahaya."
+      }
+    },
+    "v0_6_1": {
+      "intro": "Berikut adalah fitur dan peningkatan baru di versi 0.6.1.",
+      "settingsRework": {
+        "title": "Desain Ulang Halaman Pengaturan",
+        "description": "Halaman pengaturan yang dirancang ulang sepenuhnya agar lebih terstruktur dan mudah digunakan."
+      },
+      "autoHideChrome": {
+        "title": "Sembunyikan Elemen Otomatis",
+        "description": "Opsi untuk mengatur apakah bilah judul dan tombol kembali halaman pemutar disembunyikan secara otomatis saat tidak aktif."
+      },
+      "voiceInputPause": {
+        "title": "Jeda Otomatis Penginputan Suara",
+        "description": "Menjeda pemutaran secara otomatis saat menggunakan penginputan suara Windows, tersedia di Pengaturan Laboratorium."
+      },
+      "obsStaticLink": {
+        "title": "Berbagi Tautan Statis OBS",
+        "description": "Versi web kini mendukung pembuatan dan pengiriman tautan statis OBS untuk integrasi streaming."
       }
     }
   },

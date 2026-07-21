@@ -29,6 +29,8 @@ export default {
     "geometricBgShown": "Common geometric background shown",
     "minimizeToTray": "Minimize will hide to tray",
     "minimizeToTaskbar": "Minimize will stay in taskbar",
+    "voiceInputPauseOn": "Pause on voice input enabled",
+    "voiceInputPauseOff": "Pause on voice input disabled",
     "taskbarHidden": "Main window taskbar icon hidden",
     "taskbarRestored": "Main window taskbar icon restored",
     "openPlayerOnLaunch": "Launch directly to player page",
@@ -63,6 +65,10 @@ export default {
     "langManual": "Interface language switched to {{language}}",
     "panelCloseBtnShown": "Panel close button shown",
     "panelCloseBtnHidden": "Panel close button hidden",
+    "playerBackButtonAlwaysShown": "Player back button will remain visible",
+    "playerBackButtonAutoHidden": "Player back button will reveal on hover",
+    "mainWindowTitlebarAlwaysShown": "Main window control buttons will remain visible",
+    "mainWindowTitlebarAutoHidden": "Main window control buttons will reveal on hover",
     "stageModeOn": "Stage mode enabled",
     "stageModeOff": "Stage mode disabled",
     "queueInsertNext": "Queue insert to play next",
@@ -221,6 +227,7 @@ export default {
       "settings-r2-sync": { "title": "Sync server settings", "description": "Open sync server settings" },
       "sync-now": { "title": "Sync now", "description": "Sync AI themes" },
       "settings-desktop": { "title": "Desktop settings", "description": "Open desktop app settings" },
+      "desktop-toggle-voice-input-pause": { "title": "Voice input pause", "description": "Toggle pausing playback during voice input" },
       "settings-lab": { "title": "Lab settings", "description": "Open experimental settings" },
       "visualizer-toggle-random-per-song": { "title": "Random visualizer for every song", "description": "Toggle a random lyric animation mode whenever the song changes" },
       "settings-visualizer": { "title": "Visualizer settings", "description": "Open lyrics animation workbench" },
@@ -272,6 +279,8 @@ export default {
       "background-url": { "title": "Background: Embedded Background", "description": "Switch background to embedded webpage mode" },
       "settings-toggle-transparent": { "title": "Toggle transparency", "description": "Toggle transparent player background" },
       "settings-toggle-daylight": { "title": "Toggle light/dark", "description": "Toggle theme daylight/midnight mode" },
+      "settings-toggle-player-back-button": { "title": "Always show player back button", "description": "Toggle whether the player page back button stays visible" },
+      "settings-toggle-main-window-titlebar": { "title": "Always show window control buttons", "description": "Toggle whether the main window control buttons stay visible" },
       "settings-toggle-bottom-subtitle-overlay": { "title": "Toggle bottom subtitle overlay", "description": "Show or hide the whole bottom subtitle overlay" },
       "settings-toggle-subtitle-translation": { "title": "Toggle subtitle translation", "description": "Show or hide translation text in visualizer subtitles" },
       "settings-toggle-subtitle-background": { "title": "Toggle subtitle background", "description": "Show or hide the readability background behind visualizer subtitles" },
@@ -565,6 +574,14 @@ export default {
     "enableUpdateCheckDesc": "Check GitHub releases through the system proxy when the desktop app starts.",
     "enableAutoUpdate": "Enable Auto Update",
     "enableAutoUpdateDesc": "Automatically download updates after a new version is found.",
+      "updateChannel": "Update Channel",
+      "updateChannelDesc": "Choose which release lane this desktop app follows.",
+      "updateChannelRealeco": "Realeco · Stable",
+      "updateChannelLimo": "Limo · Nightly",
+      "updateChannelCielo": "Cielo · Canary",
+      "updateChannelInternal": "Internal",
+      "updateUnsupportedSystem": "Automatic updates are unavailable on the current system.",
+    "updateUnsupportedChannel": "Automatic updates are unavailable for this internal build.",
     "autoUpdateGithubNotice": "Auto update needs access to GitHub; if the network is unstable, keep a system proxy enabled.",
     "openReleasePage": "Open Release Page",
     "downloadChina": "CN Download",
@@ -576,6 +593,12 @@ export default {
     "enableStaticModeDescSub": "Does not affect lyric text effects or rendering.",
     "labSettings": "Lab Settings",
     "labSettingsDesc": "Open a separate page for experimental playback and panel behavior settings.",
+    "labPerformanceSection": "Performance & Background",
+    "labPerformanceSectionDesc": "Controls for animation workload and the home background.",
+    "labPlayerUiSection": "Player Page UI",
+    "labPlayerUiSectionDesc": "Visibility and quick-access controls for the player page.",
+    "labWindowAndToolsSection": "Window & Tools",
+    "labWindowAndToolsSectionDesc": "Desktop window behavior and advanced utilities.",
     "disableHomeDynamicBackground": "Disable Home Dynamic Background",
     "disableHomeDynamicBackgroundDesc": "When enabled, the home page stops background animation to reduce GPU usage.",
     "disableHomeDynamicBackgroundWarning": "Off by default, so dynamic background remains enabled unless you turn this on.",
@@ -587,6 +610,10 @@ export default {
     "lyricMatchPriorityDesc": "When multiple lyric sources have high-confidence matches, prefer this source first.",
     "labHidePlayerUi": "Hide Player UI",
     "labHidePlayerUiDesc": "Only applies on the player page. You can hide the bottom control bar, bottom subtitle, and right-side button separately. After hiding the right-side button, you can still use P to open or close the right panel.",
+    "alwaysShowPlayerBackButton": "Always Show Player Back Button",
+    "alwaysShowPlayerBackButtonDesc": "Keep the back button in the top-left corner of the player page visible.",
+    "alwaysShowMainWindowTitlebar": "Always Show Window Control Buttons",
+    "alwaysShowMainWindowTitlebarDesc": "Keep the minimize, maximize, and close buttons visible without showing the titlebar strip.",
     "hidePlayerProgressBar": "Hide player bottom control bar",
     "hidePlayerTranslationSubtitle": "Hide bottom subtitle overlay",
     "hidePlayerTranslationSubtitleDesc": "Does not affect visualizer modes that render standalone subtitles.",
@@ -595,6 +622,10 @@ export default {
     "transparentPlayerBackgroundDesc": "Only applies on the player page. When enabled, Folia switches to transparent window mode for OBS browser sources or chroma key overlays.",
     "enablePlayerPageNativeBlur": "Enable Player Page Native Blur",
     "enablePlayerPageNativeBlurDesc": "When enabled, theme, image, Monet, and other player backgrounds are hidden and replaced by the system native blur. Applies only in non-transparent mode on desktop; the native effect uses more resources and may lag while moving the window.",
+    "nativeBlurConfirmTitle": "System glass effect",
+    "nativeBlurConfirmDesc": "This changes the window to a translucent background using the system glass effect. Folia backgrounds will not be shown.",
+    "nativeBlurConfirmAction": "I understand",
+    "nativeBlurBackgroundNotice": "Native glassmorphism blur is enabled; lyrics animation background settings are currently overridden.",
     "autoHidePlayerChrome": "Auto-hide player controls",
     "autoHidePlayerChromeDesc": "When enabled, the player progress bar and right side buttons will automatically hide when the mouse leaves the window for more than 3 seconds.",
     "disableVisualizerVignette": "Disable vignette",
@@ -609,6 +640,9 @@ export default {
     "hideRemoteControlTaskbarIcon": "Hide Remote Control taskbar icon",
     "hideRemoteControlTaskbarIconDesc": "Hide the Remote Control window from the taskbar while it is open.",
     "openPlayerOnLaunch": "Open player on launch",
+    "voiceInputSettings": "Voice input",
+    "voiceInputPause": "Pause playback during voice input",
+    "voiceInputPauseDesc": "Automatically pause playback while system voice input (Win+H voice typing, IME speech-to-text) or another app uses the microphone, and resume afterwards. Windows desktop only.",
     "showOpenPanelCloseButton": "Show panel close button",
     "showOpenPanelCloseButtonDesc": "Keep the floating close button visible after the song info card opens.",
     "showOpenPanelCloseButtonDescSub": "Turn this off for cleaner screen recordings. Mobile users may still prefer leaving it on.",
@@ -1142,6 +1176,25 @@ export default {
       "dioramaRework": {
         "title": "Diorama Particle Rework",
         "description": "Diorama now offers ripple-driven point-cloud and corridor modes, more particle shapes, keyword coloring, and controls for density and glow."
+      }
+    },
+    "v0_6_1": {
+      "intro": "Here are the new features and improvements in version 0.6.1.",
+      "settingsRework": {
+        "title": "Redesigned Settings Page",
+        "description": "A completely redesigned settings interface with cleaner structure, logical grouping, and improved usability."
+      },
+      "autoHideChrome": {
+        "title": "Auto-Hide Controls",
+        "description": "Optionally toggle auto-hiding for the top titlebar and player return button when idle."
+      },
+      "voiceInputPause": {
+        "title": "Voice Input Auto-Pause",
+        "description": "Automatically pause playback when using Windows voice typing, available in Lab Settings."
+      },
+      "obsStaticLink": {
+        "title": "OBS Static Link Sharing",
+        "description": "Web version now supports generating and sharing static OBS overlay links for streaming setups."
       }
     }
   },

@@ -334,6 +334,8 @@ export default function App() {
         subtitleFontFallbackFamilies,
         lyricFilterPattern,
         showOpenPanelCloseButton,
+        alwaysShowPlayerBackButton,
+        alwaysShowMainWindowTitlebar,
         enableNowPlayingStage,
         enablePlayerCapStage,
         playerCapHost,
@@ -357,6 +359,8 @@ export default function App() {
         handleToggleMinimizeToTray,
         handleToggleHideTaskbarIcon,
         handleToggleOpenPlayerOnLaunch,
+        voiceInputPauseEnabled,
+        handleToggleVoiceInputPause,
         handleToggleMediaCache,
         handleSetBackgroundOpacity,
         setDaylightPreference,
@@ -385,6 +389,8 @@ export default function App() {
         handleSetAppLanguagePreference,
         handleSetLyricFilterPattern,
         handleToggleOpenPanelCloseButton,
+        handleToggleAlwaysShowPlayerBackButton,
+        handleToggleAlwaysShowMainWindowTitlebar,
         handleToggleNowPlayingStage,
         handleSetQueueAddBehavior,
         handleSetAudioOutputDeviceId: persistAudioOutputDeviceId,
@@ -1774,8 +1780,21 @@ export default function App() {
         toggleSubtitleOverlayBackground: () => {
             handleToggleSubtitleOverlayBackground(!subtitleOverlayBackground);
         },
+        alwaysShowPlayerBackButton,
+        toggleAlwaysShowPlayerBackButton: () => {
+            handleToggleAlwaysShowPlayerBackButton(!alwaysShowPlayerBackButton);
+        },
+        alwaysShowMainWindowTitlebar,
+        toggleAlwaysShowMainWindowTitlebar: () => {
+            handleToggleAlwaysShowMainWindowTitlebar(!alwaysShowMainWindowTitlebar);
+        },
         enablePlayerPageNativeBlur,
         toggleDaylightMode,
+        voiceInputPauseEnabled,
+        voiceInputPauseSupported: isElectronWindow && typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('win'),
+        toggleVoiceInputPause: () => {
+            handleToggleVoiceInputPause(!voiceInputPauseEnabled);
+        },
         setAppLanguagePreference: handleSetAppLanguagePreference,
         enableAlternativeLyricSources,
         runAutoMatchBestLyric: handleAutoMatchBestLyricForCurrentSong,
@@ -1822,10 +1841,16 @@ export default function App() {
         transparentPlayerBackground,
         toggleTransparentModeWithHandoff,
         toggleDaylightMode,
+        voiceInputPauseEnabled,
+        handleToggleVoiceInputPause,
         showSubtitleTranslation,
         subtitleOverlayBackground,
         handleToggleAlternativeLyricSources,
         handleToggleSubtitleOverlayBackground,
+        handleToggleAlwaysShowPlayerBackButton,
+        handleToggleAlwaysShowMainWindowTitlebar,
+        alwaysShowPlayerBackButton,
+        alwaysShowMainWindowTitlebar,
         setIsUserGuideModalOpen,
         openThemeQuickEditor,
         canOpenThemeQuickEditor,
@@ -2686,6 +2711,7 @@ export default function App() {
             showTransparentWindowBorder={showTransparentWindowBorder}
             isPlayerView={isPlayerView}
             isTitlebarRevealed={isTitlebarRevealed}
+            alwaysShowMainWindowTitlebar={alwaysShowMainWindowTitlebar}
             isMainWindowClickThroughEnabled={isMainWindowClickThroughEnabled}
             showMainWindowClickThroughToggle={isMainWindowClickThroughEnabled ? isClickThroughToggleHotspotActive : isTitlebarRevealed}
             isDaylight={isDaylight}
@@ -2934,6 +2960,7 @@ export default function App() {
                         monetPortraitImage={monetPortraitImage}
                         onLyricLineSeek={visualizerMode === 'monet' ? handleMonetLyricLineSeek : undefined}
                         onBack={navigateBackFromPlayer}
+                        alwaysShowBackButton={alwaysShowPlayerBackButton}
                     />
                 )}
             </div>

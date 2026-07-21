@@ -1,11 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Cpu, GamepadDirectional, Monitor, PlayCircle, RotateCcw, Settings2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Cpu, GamepadDirectional, Mic, Monitor, PlayCircle, RotateCcw, Settings2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import type { Theme, VisualizerFrameRate } from '../../../types';
 import { useSettingsUiStore } from '../../../stores/useSettingsUiStore';
 import { VISUALIZER_FRAME_RATE_OPTIONS } from '../../../utils/frameRateLimiter';
+import ThemedDialog from '../../shared/ThemedDialog';
 
 // src/components/modal/settings/LabSettingsModal.tsx
 // Experimental settings subview kept outside SettingsModal to avoid another giant inline panel.
@@ -15,6 +16,12 @@ type LabSettingsModalProps = {
     onClose: () => void;
     onOpenLyricFilterSettings: () => void;
     theme?: Theme;
+    voiceInputPause?: {
+        enabled: boolean;
+        supported: boolean;
+        onToggle: () => void;
+    };
+    embedded?: boolean;
 };
 
 const shellTransition = { duration: 0.24, ease: 'easeOut' as const };
@@ -31,13 +38,18 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
     onClose,
     onOpenLyricFilterSettings,
     theme,
+    voiceInputPause,
+    embedded,
 }) => {
     const { t } = useTranslation();
     const isMouseDownOnOverlayRef = useRef(false);
+    const [isNativeBlurNoticeOpen, setIsNativeBlurNoticeOpen] = useState(false);
     const {
         disableHomeDynamicBackground,
         hidePlayerProgressBar,
         hidePlayerRightPanelButton,
+        alwaysShowPlayerBackButton,
+        alwaysShowMainWindowTitlebar,
         hidePlayerTranslationSubtitle,
         isDaylight,
         showOpenPanelCloseButton,
@@ -46,6 +58,8 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
         onToggleDisableHomeDynamicBackground,
         onToggleHidePlayerProgressBar,
         onToggleHidePlayerRightPanelButton,
+        onToggleAlwaysShowPlayerBackButton,
+        onToggleAlwaysShowMainWindowTitlebar,
         onToggleHidePlayerTranslationSubtitle,
         onToggleHideTaskbarIcon,
         onToggleMinimizeToTray,
@@ -59,6 +73,8 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
         disableHomeDynamicBackground: state.disableHomeDynamicBackground,
         hidePlayerProgressBar: state.hidePlayerProgressBar,
         hidePlayerRightPanelButton: state.hidePlayerRightPanelButton,
+        alwaysShowPlayerBackButton: state.alwaysShowPlayerBackButton,
+        alwaysShowMainWindowTitlebar: state.alwaysShowMainWindowTitlebar,
         hidePlayerTranslationSubtitle: state.hidePlayerTranslationSubtitle,
         isDaylight: state.isDaylight,
         showOpenPanelCloseButton: state.showOpenPanelCloseButton,
@@ -68,6 +84,8 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
         onToggleDisableHomeDynamicBackground: state.handleToggleDisableHomeDynamicBackground,
         onToggleHidePlayerProgressBar: state.handleToggleHidePlayerProgressBar,
         onToggleHidePlayerRightPanelButton: state.handleToggleHidePlayerRightPanelButton,
+        onToggleAlwaysShowPlayerBackButton: state.handleToggleAlwaysShowPlayerBackButton,
+        onToggleAlwaysShowMainWindowTitlebar: state.handleToggleAlwaysShowMainWindowTitlebar,
         onToggleHidePlayerTranslationSubtitle: state.handleToggleHidePlayerTranslationSubtitle,
         onToggleHideTaskbarIcon: state.handleToggleHideTaskbarIcon,
         onToggleMinimizeToTray: state.handleToggleMinimizeToTray,
@@ -99,6 +117,20 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
     const selectedVisualizerFrameRateIndex = VISUALIZER_FRAME_RATE_OPTIONS.indexOf(selectedVisualizerFrameRate);
     const isLinux = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('linux');
 
+    const handleNativeBlurToggle = () => {
+        if (enablePlayerPageNativeBlur) {
+            onTogglePlayerPageNativeBlur(false);
+            return;
+        }
+
+        setIsNativeBlurNoticeOpen(true);
+    };
+
+    const confirmNativeBlur = () => {
+        onTogglePlayerPageNativeBlur(true);
+        setIsNativeBlurNoticeOpen(false);
+    };
+
     const renderToggle = (checked: boolean, onChange: () => void) => (
         <button
             type="button"
@@ -128,80 +160,19 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
         }
     };
 
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={shellTransition}
-                    className="fixed inset-0 z-[136] backdrop-blur-xl p-3 sm:p-5"
-                    style={{ backgroundColor: overlayBackground }}
-                    onMouseDown={handleOverlayMouseDown}
-                    onClick={handleBackdropClick}
-                >
-                    <motion.div
-                        {...panelMotion}
-                        transition={shellTransition}
-                        className={`mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-[32px] border ${borderColor} ${subviewPanelBg} shadow-[0_24px_80px_rgba(0,0,0,0.28)] relative`}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        {/* Decorative background blobs */}
-                        <div className="absolute inset-0 pointer-events-none z-0">
-                            <div 
-                                className={`absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[80px] ${isDaylight ? 'opacity-20' : 'opacity-10'}`} 
-                                style={{ backgroundColor: theme?.accentColor || (isDaylight ? '#60a5fa' : '#3b82f6') }} 
-                            />
-                            <div 
-                                className={`absolute -bottom-24 -left-24 w-64 h-64 rounded-full blur-[80px] ${isDaylight ? 'opacity-20' : 'opacity-10'}`} 
-                                style={{ backgroundColor: theme?.secondaryColor || theme?.accentColor || (isDaylight ? '#c084fc' : '#a855f7') }} 
-                            />
-                        </div>
-                        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6 relative z-10">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className={`h-10 w-10 rounded-full border flex items-center justify-center transition-colors ${utilityGhostButtonClass}`}
-                                    style={{ color: 'var(--text-primary)' }}
-                                >
-                                    <ChevronLeft size={18} />
-                                </button>
-                                <div className="min-w-0">
-                                    <div className="text-lg sm:text-xl font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                                        {t('options.labSettings')}
-                                    </div>
-                                    <div className="text-xs opacity-50 mt-1" style={{ color: 'var(--text-secondary)' }}>
-                                        {t('options.labSettingsDesc')}
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onToggleStaticMode(false);
-                                    onToggleDisableHomeDynamicBackground(false);
-                                    onToggleHidePlayerProgressBar(false);
-                                    onToggleHidePlayerTranslationSubtitle(false);
-                                    onToggleHidePlayerRightPanelButton(false);
-                                    onToggleOpenPanelCloseButton(true);
-                                    onToggleMinimizeToTray(false);
-                                    onToggleHideTaskbarIcon(false);
-                                    onToggleOpenPlayerOnLaunch(false);
-                                    onVisualizerFrameRateChange('off');
-                                }}
-                                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-colors ${utilityGhostButtonClass}`}
-                                style={{ color: 'var(--text-primary)' }}
-                            >
-                                <RotateCcw size={14} />
-                                <span>{t('ui.default')}</span>
-                            </button>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-5 sm:px-6 relative z-10">
-                            <div className="space-y-4">
-                                <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${settingsCardClass}`}>
+    const content = (
+        <>
+            <div className={embedded ? "space-y-4" : "flex-1 overflow-y-auto custom-scrollbar px-4 py-5 sm:px-6 relative z-10"}>
+            <div className={embedded ? "space-y-4" : "space-y-4"}>
+                <div className="pt-1">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        {t('options.labPerformanceSection')}
+                    </div>
+                    <div className="mt-1 text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
+                        {t('options.labPerformanceSectionDesc')}
+                    </div>
+                </div>
+                <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${settingsCardClass}`}>
                                     <div className="space-y-1">
                                         <div className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                                             <Monitor size={14} />
@@ -277,6 +248,15 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
                                     </div>
                                 </div>
 
+                                <div className="border-t border-white/10 pt-5">
+                                    <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.labPlayerUiSection')}
+                                    </div>
+                                    <div className="mt-1 text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
+                                        {t('options.labPlayerUiSectionDesc')}
+                                    </div>
+                                </div>
+
                                 <div className={`p-4 rounded-xl border space-y-3 ${settingsCardClass}`}>
                                     <div className="space-y-1">
                                         <div className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
@@ -337,8 +317,43 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
                                     {renderToggle(showOpenPanelCloseButton, () => onToggleOpenPanelCloseButton(!showOpenPanelCloseButton))}
                                 </div>
 
+                                <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${settingsCardClass}`}>
+                                    <div className="space-y-1">
+                                        <div className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                                            <ChevronLeft size={14} />
+                                            {t('options.alwaysShowPlayerBackButton')}
+                                        </div>
+                                        <div className="text-xs opacity-50 max-w-[320px]" style={{ color: 'var(--text-secondary)' }}>
+                                            {t('options.alwaysShowPlayerBackButtonDesc')}
+                                        </div>
+                                    </div>
+                                    {renderToggle(alwaysShowPlayerBackButton, () => onToggleAlwaysShowPlayerBackButton(!alwaysShowPlayerBackButton))}
+                                </div>
+
+                                <div className="border-t border-white/10 pt-5">
+                                    <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.labWindowAndToolsSection')}
+                                    </div>
+                                    <div className="mt-1 text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>
+                                        {t('options.labWindowAndToolsSectionDesc')}
+                                    </div>
+                                </div>
+
+                                <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 ${settingsCardClass}`}>
+                                    <div className="space-y-1">
+                                        <div className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                                            <Monitor size={14} />
+                                            {t('options.alwaysShowMainWindowTitlebar')}
+                                        </div>
+                                        <div className="text-xs opacity-50 max-w-[320px]" style={{ color: 'var(--text-secondary)' }}>
+                                            {t('options.alwaysShowMainWindowTitlebarDesc')}
+                                        </div>
+                                    </div>
+                                    {renderToggle(alwaysShowMainWindowTitlebar, () => onToggleAlwaysShowMainWindowTitlebar(!alwaysShowMainWindowTitlebar))}
+                                </div>
+
                                 {!isLinux && (
-                                    <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors hover:bg-white/8 ${settingsCardInteractiveClass}`} onClick={() => onTogglePlayerPageNativeBlur(!enablePlayerPageNativeBlur)}>
+                                    <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors hover:bg-white/8 ${settingsCardInteractiveClass}`} onClick={handleNativeBlurToggle}>
                                         <div className="flex flex-col pr-8">
                                             <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                                 {t('options.enablePlayerPageNativeBlur')}
@@ -347,7 +362,7 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
                                                 {t('options.enablePlayerPageNativeBlurDesc')}
                                             </span>
                                         </div>
-                                        {renderToggle(enablePlayerPageNativeBlur, () => onTogglePlayerPageNativeBlur(!enablePlayerPageNativeBlur))}
+                                        {renderToggle(enablePlayerPageNativeBlur, handleNativeBlurToggle)}
                                     </div>
                                 )}
 
@@ -368,8 +383,111 @@ const LabSettingsModal: React.FC<LabSettingsModalProps> = ({
                                         <ChevronRight size={18} className="shrink-0 opacity-60" style={{ color: 'var(--text-primary)' }} />
                                     </div>
                                 </button>
+
+                                {voiceInputPause?.supported && (
+                                    <div className={`flex items-center justify-between p-4 rounded-xl border transition-colors hover:bg-white/8 ${settingsCardInteractiveClass}`} onClick={voiceInputPause.onToggle}>
+                                        <div className="flex flex-col pr-8">
+                                            <span className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                                                <Mic size={14} />
+                                                {t('options.voiceInputPause')}
+                                            </span>
+                                            <span className="text-xs opacity-50 mt-1 max-w-[360px]" style={{ color: 'var(--text-secondary)' }}>
+                                                {t('options.voiceInputPauseDesc')}
+                                            </span>
+                                        </div>
+                                        {renderToggle(voiceInputPause.enabled, voiceInputPause.onToggle)}
+                                    </div>
+                                )}
+            </div>
+            </div>
+            <ThemedDialog
+                isOpen={isNativeBlurNoticeOpen}
+                onClose={() => setIsNativeBlurNoticeOpen(false)}
+                isDaylight={isDaylight}
+                title={t('options.nativeBlurConfirmTitle')}
+                footer={(
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setIsNativeBlurNoticeOpen(false)}
+                            className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${utilityGhostButtonClass}`}
+                            style={{ color: 'var(--text-primary)' }}
+                        >
+                            {t('localMusic.cancel')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={confirmNativeBlur}
+                            className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ backgroundColor: theme?.accentColor || '#3b82f6' }}
+                        >
+                            {t('options.nativeBlurConfirmAction')}
+                        </button>
+                    </>
+                )}
+            >
+                <p className="text-sm leading-6 opacity-75" style={{ color: 'var(--text-secondary)' }}>
+                    {t('options.nativeBlurConfirmDesc')}
+                </p>
+            </ThemedDialog>
+        </>
+    );
+
+    if (embedded) {
+        return content;
+    }
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={shellTransition}
+                    className="fixed inset-0 z-[136] backdrop-blur-xl p-3 sm:p-5"
+                    style={{ backgroundColor: overlayBackground }}
+                    onMouseDown={handleOverlayMouseDown}
+                    onClick={handleBackdropClick}
+                >
+                    <motion.div
+                        {...panelMotion}
+                        transition={shellTransition}
+                        className={`mx-auto flex h-full max-w-3xl flex-col overflow-hidden rounded-[32px] border ${borderColor} ${subviewPanelBg} shadow-[0_24px_80px_rgba(0,0,0,0.28)] relative`}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="absolute inset-0 pointer-events-none z-0">
+                            <div 
+                                className={`absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[80px] ${isDaylight ? 'opacity-20' : 'opacity-10'}`} 
+                                style={{ backgroundColor: theme?.accentColor || (isDaylight ? '#60a5fa' : '#3b82f6') }} 
+                            />
+                            <div 
+                                className={`absolute -bottom-24 -left-24 w-64 h-64 rounded-full blur-[80px] ${isDaylight ? 'opacity-20' : 'opacity-10'}`} 
+                                style={{ backgroundColor: theme?.secondaryColor || theme?.accentColor || (isDaylight ? '#c084fc' : '#a855f7') }} 
+                            />
+                        </div>
+                        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6 relative z-10">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className={`h-10 w-10 rounded-full border flex items-center justify-center transition-colors ${utilityGhostButtonClass}`}
+                                    style={{ color: 'var(--text-primary)' }}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <div className="min-w-0">
+                                    <div className="text-lg sm:text-xl font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                                        {t('options.labSettings')}
+                                    </div>
+                                    <div className="text-xs opacity-50 mt-1" style={{ color: 'var(--text-secondary)' }}>
+                                        {t('options.labSettingsDesc')}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        {content}
                     </motion.div>
                 </motion.div>
             )}
