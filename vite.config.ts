@@ -215,6 +215,12 @@ export default async function viteConfig({ mode }: ConfigEnv): Promise<UserConfi
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        // Registration is done by hand in bootstrap.tsx. The generated registerSW.js only calls
+        // navigator.serviceWorker.register(), which never reacts to an update -- so a new build was
+        // installed in the background while every reload kept being served the old precached
+        // index.html, and only a cache-clearing reload escaped it. Registering through the virtual
+        // module gives the update hook the OBS overlay needs to opt out of the reload.
+        injectRegister: null,
         includeAssets: ['icon.svg'],
         devOptions: {
           // SW disabled in dev: avoids stale-cache surprises while developing (the prod build still ships the PWA).
