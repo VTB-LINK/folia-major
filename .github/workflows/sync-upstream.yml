@@ -4,8 +4,8 @@ name: Sync main from upstream
 # 定时（每 4 小时）+ 手动（workflow_dispatch）。
 # main 仅 fast-forward：push 不加 --force，若 main 意外分叉则失败报警而非覆盖，
 # 保证 main 始终是上游的干净镜像（分叉只应发生在 fork-release / feat 分支）。
-# tag 直接镜像上游：fork 自身不产生 tag，故 force 更新即可跟随移动标签（nightly 等），
-# 版本 tag（v0.6.1 等）为不可变、force 对其是幂等 no-op。
+# tag 只镜像正式版本（vN.N.N，无后缀）：canary / rc / nightly / cielo 等测试标签一律跳过。
+# 正式版 tag 不可变，force 推送对其是幂等 no-op（用 force 仅为对已存在的 tag 稳妥幂等）。
 on:
   schedule:
     - cron: '17 */4 * * *'
@@ -34,8 +34,12 @@ jobs:
           echo "upstream main = $(git rev-parse --short FETCH_HEAD)"
           git push origin FETCH_HEAD:refs/heads/main
 
-      - name: Mirror upstream tags
+      - name: Mirror upstream release tags
         run: |
           set -euo pipefail
           git fetch --force --tags https://github.com/chthollyphile/folia-major.git
-          git push origin --force --tags
+          # 只保留正式版本号 tag（vN.N.N），过滤掉 -canary / -rc / nightly / cielo 等测试标签。
+          tags=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+          for tag in $tags; do
+            git push origin --force "refs/tags/$tag:refs/tags/$tag"
+          done
