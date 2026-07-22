@@ -107,29 +107,31 @@ export function reducePlayerCapEvent(
     case 'all_lyrics': {
       const data = event.data as PlayerCapAllLyricsData;
       const durationSec = data.duration || state.clock.durationSec;
+      // position is the real-time playback position directly (= progress × duration, offset-free);
+      // read it rather than reconstructing from progress, which only carries the rounded ratio.
       return {
         ...state,
         lyrics: mapAllLyricsToLyricData(data, timeBasis),
-        clock: { positionSec: (data.progress || 0) * durationSec, durationSec, anchoredAtMs: nowMs, playing: state.playerState === 'playing' },
+        clock: { positionSec: data.position, durationSec, anchoredAtMs: nowMs, playing: state.playerState === 'playing' },
       };
     }
 
     case 'lyric_update': {
-      // Mainly used to refresh the clock anchor (progress); the current line is derived from clock advance, so index is not consumed directly.
+      // Mainly used to refresh the clock anchor (position); the current line is derived from clock advance, so index is not consumed directly.
       const data = event.data as PlayerCapLyricUpdateData;
-      return { ...state, clock: { ...state.clock, positionSec: (data.progress || 0) * state.clock.durationSec, anchoredAtMs: nowMs } };
+      return { ...state, clock: { ...state.clock, positionSec: data.position, anchoredAtMs: nowMs } };
     }
 
-    // Both carry the real playback position in play_time (see PlayerCapPlaybackData), so both
-    // re-anchor from it rather than from an extrapolation. The contract asks for exactly this:
-    // "前端收到 playback_pause 应停止时间插值，收到 playback_resume 应以 play_time 为锚点重新开始插值".
+    // Both carry the real playback position, so both re-anchor from it rather than from an
+    // extrapolation. The contract asks for exactly this: "前端收到 playback_pause 应停止时间插值，
+    // 收到 playback_resume 应以 position 为锚点重新开始插值".
     //
     // It matters most on resume, which is also the seek notification: the jumped-to position is in
     // this event and nowhere else, so waiting for the next lyric_update leaves the previous line on
     // screen for as long as that takes. It also beats the replayed cache after a long pause, where
     // all_lyrics comes back holding the progress from before the pause while this holds the truth.
     case 'playback_pause': {
-      const paused = (event.data as PlayerCapPlaybackData)?.play_time;
+      const paused = (event.data as PlayerCapPlaybackData)?.position;
       return {
         ...state,
         playerState: 'paused',
@@ -143,14 +145,13 @@ export function reducePlayerCapEvent(
     }
 
     case 'playback_resume': {
-      const resumed = (event.data as PlayerCapPlaybackData)?.play_time;
+      const resumed = (event.data as PlayerCapPlaybackData)?.position;
       return {
         ...state,
         playerState: 'playing',
         clock: {
           ...state.clock,
-          // Missing value: keep the anchor and let the next progress event correct it, which is what
-          // this branch did before play_time was honored at all.
+          // Missing value: keep the anchor and let the next progress event correct it.
           positionSec: Number.isFinite(resumed) ? resumed : currentPosition(state.clock, nowMs),
           anchoredAtMs: nowMs,
           playing: true,
