@@ -1,12 +1,14 @@
 name: Sync main from upstream
 
-# 把 fork 的 main 快进同步到上游 chthollyphile/folia-major:main。
-# 定时（每日）+ 手动（workflow_dispatch）。
-# 仅 fast-forward：push 不加 --force，若 main 意外分叉会失败报警而非覆盖，
-# 以此保证 main 始终是上游的干净镜像（分叉只应发生在 fork-release / feat 分支）。
+# 把 fork 的 main 快进同步到上游 chthollyphile/folia-major:main，并镜像上游 tag。
+# 定时（每 4 小时）+ 手动（workflow_dispatch）。
+# main 仅 fast-forward：push 不加 --force，若 main 意外分叉则失败报警而非覆盖，
+# 保证 main 始终是上游的干净镜像（分叉只应发生在 fork-release / feat 分支）。
+# tag 直接镜像上游：fork 自身不产生 tag，故 force 更新即可跟随移动标签（nightly 等），
+# 版本 tag（v0.6.1 等）为不可变、force 对其是幂等 no-op。
 on:
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '17 */4 * * *'
   workflow_dispatch:
 
 permissions:
@@ -31,3 +33,9 @@ jobs:
           git fetch https://github.com/chthollyphile/folia-major.git main
           echo "upstream main = $(git rev-parse --short FETCH_HEAD)"
           git push origin FETCH_HEAD:refs/heads/main
+
+      - name: Mirror upstream tags
+        run: |
+          set -euo pipefail
+          git fetch --force --tags https://github.com/chthollyphile/folia-major.git
+          git push origin --force --tags
