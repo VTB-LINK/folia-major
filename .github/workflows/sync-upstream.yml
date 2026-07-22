@@ -6,6 +6,9 @@ name: Sync main from upstream
 # 保证 main 始终是上游的干净镜像（分叉只应发生在 fork-release / feat 分支）。
 # tag 只镜像正式版本（vN.N.N，无后缀）：canary / rc / nightly / cielo 等测试标签一律跳过。
 # 正式版 tag 不可变，force 推送对其是幂等 no-op（用 force 仅为对已存在的 tag 稳妥幂等）。
+# 认证：checkout 用带 workflow scope 的 PAT（仓库 secret SYNC_PAT），不能用默认 GITHUB_TOKEN——
+# GitHub 禁止 GITHUB_TOKEN 推送 .github/workflows/ 的增改，上游一旦改动 workflow 文件（如
+# canary-pre-release.yml）ff 推送就会被拒。SYNC_PAT 需 contents + workflows 读写权限。
 on:
   schedule:
     - cron: '17 */4 * * *'
@@ -26,6 +29,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # PAT（带 workflow scope）用于推 main，含上游的 workflow 文件改动；见文件顶部说明。
+          token: ${{ secrets.SYNC_PAT }}
 
       - name: Fast-forward main from upstream
         run: |
