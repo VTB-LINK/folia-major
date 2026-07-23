@@ -147,9 +147,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         subtitleOverlayBackground: state.subtitleOverlayBackground,
         lyricsFontStyle: state.lyricsFontStyle,
         lyricsFontScale: state.lyricsFontScale,
+        lyricsFontWeight: state.lyricsFontWeight,
         lyricsFontFallbackFamilies: state.lyricsFontFallbackFamilies,
         subtitleFontInheritsLyrics: state.subtitleFontInheritsLyrics,
         subtitleFontStyle: state.subtitleFontStyle,
+        subtitleFontWeight: state.subtitleFontWeight,
         subtitleFontFamily: state.subtitleFontFamily,
         subtitleFontFallbackFamilies: state.subtitleFontFallbackFamilies,
         classicTuning: state.classicTuning,
@@ -177,9 +179,11 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
         handleToggleSubtitleOverlayBackground: state.handleToggleSubtitleOverlayBackground,
         handleSetLyricsFontStyle: state.handleSetLyricsFontStyle,
         handleSetLyricsFontScale: state.handleSetLyricsFontScale,
+        handleSetLyricsFontWeight: state.handleSetLyricsFontWeight,
         handleSetLyricsFontFallbackFamilies: state.handleSetLyricsFontFallbackFamilies,
         handleSetSubtitleFontInheritsLyrics: state.handleSetSubtitleFontInheritsLyrics,
         handleSetSubtitleFontStyle: state.handleSetSubtitleFontStyle,
+        handleSetSubtitleFontWeight: state.handleSetSubtitleFontWeight,
         handleSetSubtitleFontFamily: state.handleSetSubtitleFontFamily,
         handleSetSubtitleFontFallbackFamilies: state.handleSetSubtitleFontFallbackFamilies,
         handleSetClassicTuning: state.handleSetClassicTuning,
@@ -376,6 +380,9 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
             if (has('lyricsFontScale')) {
                 store.handleSetLyricsFontScale(config.lyricsFontScale);
             }
+            if (has('lyricsFontWeight')) {
+                store.handleSetLyricsFontWeight(config.lyricsFontWeight);
+            }
             if (has('lyricsFontFallbackFamilies') && config.lyricsFontFallbackFamilies) {
                 store.handleSetLyricsFontFallbackFamilies(config.lyricsFontFallbackFamilies);
             }
@@ -390,6 +397,9 @@ const AppearanceSettingsSubview: React.FC<AppearanceSettingsSubviewProps> = ({
             }
             if (has('subtitleFontStyle') && config.subtitleFontStyle) {
                 store.handleSetSubtitleFontStyle(config.subtitleFontStyle);
+            }
+            if (has('subtitleFontWeight')) {
+                store.handleSetSubtitleFontWeight(config.subtitleFontWeight);
             }
             if (has('subtitleFontFamily')) {
                 store.handleSetSubtitleFontFamily(config.subtitleFontFamily);
